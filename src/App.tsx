@@ -1191,11 +1191,20 @@ function AppContent() {
     }
 
     try {
-      const response = await fetch(`/api/pageRows/${encodeURIComponent(targetPage)}${force ? '?force=true' : ''}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: currentRows })
-      });
+      let response;
+      if (editingRowId && newRows.length === 1) {
+        response = await fetch(`/api/pageRows/${encodeURIComponent(targetPage)}/${encodeURIComponent(editingRowId)}${force ? '?force=true' : ''}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates: newRows[0] })
+        });
+      } else {
+        response = await fetch(`/api/pageRows/${encodeURIComponent(targetPage)}/append${force ? '?force=true' : ''}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: newRows })
+        });
+      }
 
       if (!response.ok) {
         if (response.status === 400) {
@@ -1256,25 +1265,35 @@ function AppContent() {
             const preservedData: any = {};
             for (const k of trackerKeysToKeep) if (k in existingTrackerRow) preservedData[k] = existingTrackerRow[k];
             trackerRows[tIdx] = { ...newRow, ...preservedData };
+            
+            await fetch(`/api/pageRows/${encodeURIComponent(trackerName)}/${encodeURIComponent(newRow.id)}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ updates: trackerRows[tIdx] })
+            });
+
             updatedTracker = true;
           } else if (!wasEditing) {
             const textCols = state.pageConfigs[targetPage]?.columns.filter(c => c.type === 'text') || [];
             const itemNameKey = textCols.length > 0 ? textCols[0].key : Object.keys(newRow).find(k => typeof newRow[k] === 'string' && k !== 'id') || 'id';
-            trackerRows.push({
+            const newTrackerRow = {
                id: newRow.id,
                item_name: newRow[itemNameKey] || `Item ${newRow.id}`,
                total_qty: '0'
+            };
+            trackerRows.push(newTrackerRow);
+            
+            await fetch(`/api/pageRows/${encodeURIComponent(trackerName)}/append`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows: [newTrackerRow] })
             });
+
             updatedTracker = true;
           }
         }
 
         if (updatedTracker) {
-          await fetch(`/api/pageRows/${encodeURIComponent(trackerName)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rows: trackerRows })
-          });
           setState(prev => ({
             ...prev,
             pageRows: { ...prev.pageRows, [trackerName]: trackerRows }
@@ -1309,10 +1328,8 @@ function AppContent() {
     const newRows = currentRows.filter(r => String(r.id) !== safeRowId);
 
     try {
-      await fetch(`/api/pageRows/${encodeURIComponent(targetPage)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: newRows })
+      await fetch(`/api/pageRows/${encodeURIComponent(targetPage)}/${encodeURIComponent(safeRowId)}`, {
+        method: 'DELETE'
       });
 
       setState(prev => ({
@@ -1333,10 +1350,8 @@ function AppContent() {
         const trackerRows = state.pageRows[trackerName] || [];
         const newTrackerRows = trackerRows.filter(r => String(r.id) !== safeRowId);
         if (newTrackerRows.length < trackerRows.length) {
-          await fetch(`/api/pageRows/${encodeURIComponent(trackerName)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rows: newTrackerRows })
+          await fetch(`/api/pageRows/${encodeURIComponent(trackerName)}/${encodeURIComponent(safeRowId)}`, {
+            method: 'DELETE'
           });
           setState(prev => ({
             ...prev,

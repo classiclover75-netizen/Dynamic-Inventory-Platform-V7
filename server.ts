@@ -206,8 +206,9 @@ function cleanupOrphanImages(oldRows: any[], newRows: any[]) {
           if (val.includes('/uploads/')) {
             val = val.split('/uploads/').pop() || val;
           }
-          if (imageExtensions.some(ext => val.toLowerCase().endsWith(ext)) && !/^https?:\/\//i.test(val)) {
-            set.add(val);
+          const strVal = val as string;
+          if (imageExtensions.some(ext => strVal.toLowerCase().endsWith(ext)) && !/^https?:\/\//i.test(strVal)) {
+            set.add(strVal);
           }
         }
       });
@@ -729,6 +730,71 @@ app.patch('/api/pageRows/:name/:rowId', async (req, res) => {
     }
     console.error("PATCH Row Error:", err);
     res.status(500).json({ error: 'Failed to update row' });
+  }
+});
+
+app.post('/api/pageRows/:name/append', async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { rows } = req.body;
+    const forceSave = req.query.force === 'true';
+
+    const processedRows = await processRowsConcurrently(rows || [], 50, forceSave);
+
+    if (isUsingMongoDB) {
+      const recordsToInsert = processedRows.map(data => ({
+        pageName: name,
+        data
+      }));
+      if (recordsToInsert.length > 0) {
+        await PageRow.insertMany(recordsToInsert);
+      }
+    } else {
+      const db = await getLocalDB();
+      const page = db.pages.find((p: any) => p.name === name);
+      if (!page) return res.status(404).json({ error: 'Page not found' });
+      page.rows = [...(page.rows || []), ...processedRows];
+      await saveLocalDB(db);
+    }
+    
+    res.json({ success: true });
+  } catch (err: any) {
+    if (err.message === 'SHARP_UNSUPPORTED_FORMAT') {
+      return res.status(400).json({ requiresConfirmation: true, error: "Unsupported image format detected. The system can only process standard images (JPG, PNG, WEBP, GIF, AVIF, TIFF). Do you want to force save this file as-is without processing?" });
+    }
+    console.error("POST Append Error:", err);
+    res.status(500).json({ error: 'Failed to append rows' });
+  }
+});
+
+app.delete('/api/pageRows/:name/:rowId', async (req, res) => {
+  try {
+    const { name, rowId } = req.params;
+
+    if (isUsingMongoDB) {
+      const allRows = await PageRow.find({ pageName: name });
+      const rowToDelete = allRows.find(r => String(r.data.id) === String(rowId));
+      if (!rowToDelete) {
+        return res.status(404).json({ error: 'Row not found' });
+      }
+      cleanupOrphanImages([rowToDelete.data], []);
+      await PageRow.findByIdAndDelete(rowToDelete._id);
+    } else {
+      const db = await getLocalDB();
+      const page = db.pages.find((p: any) => p.name === name);
+      if (!page) return res.status(404).json({ error: 'Page not found' });
+      const rowToDelete = page.rows?.find((r: any) => String(r.id) === String(rowId));
+      if (rowToDelete) {
+        cleanupOrphanImages([rowToDelete], []);
+        page.rows = page.rows.filter((r: any) => String(r.id) !== String(rowId));
+        await saveLocalDB(db);
+      }
+    }
+    
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("DELETE Row Error:", err);
+    res.status(500).json({ error: 'Failed to delete row' });
   }
 });
 
