@@ -871,11 +871,13 @@ function AppContent() {
   const handleAddSaleColumn = async () => {
     if (!customSaleName.trim()) return;
     const newColKey = 'sale_' + Date.now();
-    const newCol = { key: newColKey, name: customSaleName, type: 'sale_tracker' as const };
+    const newCol = { key: newColKey, name: customSaleName, type: 'sale_tracker' as const, archived: false };
     
     // Find where to insert the new column (before existing sale columns)
-    const currentColumns = [...activeConfig.columns];
-    const firstSaleIndex = currentColumns.findIndex(c => c.type === 'sale_tracker');
+    const currentColumns = activeConfig.columns.map(c => 
+      c.type === 'sale_tracker' ? { ...c, archived: true } : c
+    );
+    const firstSaleIndex = activeConfig.columns.findIndex(c => c.type === 'sale_tracker');
     
     if (firstSaleIndex !== -1) {
       currentColumns.splice(firstSaleIndex, 0, newCol); // Push old columns to the right
