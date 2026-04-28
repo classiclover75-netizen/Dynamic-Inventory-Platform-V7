@@ -684,6 +684,54 @@ app.put('/api/pageRows/:name', async (req, res) => {
   }
 });
 
+app.patch('/api/pageRows/:name/:rowId', async (req, res) => {
+  try {
+    const { name, rowId } = req.params;
+    const { updates } = req.body;
+    const forceSave = req.query.force === 'true';
+
+    if (isUsingMongoDB) {
+      const allRows = await PageRow.find({ pageName: name });
+      const rowToUpdate = allRows.find(r => String(r.data.id) === String(rowId));
+      if (!rowToUpdate) {
+        return res.status(404).json({ error: 'Row not found' });
+      }
+
+      const newRowData = { ...rowToUpdate.data, ...updates };
+      const processedRow = await processRowImages(newRowData, forceSave);
+
+      cleanupOrphanImages([rowToUpdate.data], [processedRow]);
+
+      await PageRow.findByIdAndUpdate(rowToUpdate._id, { data: processedRow });
+    } else {
+      const db = await getLocalDB();
+      const page = db.pages.find((p: any) => p.name === name);
+      if (!page) return res.status(404).json({ error: 'Page not found' });
+
+      const idx = page.rows?.findIndex((r: any) => String(r.id) === String(rowId));
+      if (idx === undefined || idx === -1) {
+        return res.status(404).json({ error: 'Row not found' });
+      }
+
+      const newRowData = { ...page.rows[idx], ...updates };
+      const processedRow = await processRowImages(newRowData, forceSave);
+
+      cleanupOrphanImages([page.rows[idx]], [processedRow]);
+
+      page.rows[idx] = processedRow;
+      await saveLocalDB(db);
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    if (err.message === 'SHARP_UNSUPPORTED_FORMAT') {
+      return res.status(400).json({ requiresConfirmation: true, error: "Unsupported image format detected. The system can only process standard images (JPG, PNG, WEBP, GIF, AVIF, TIFF). Do you want to force save this file as-is without processing?" });
+    }
+    console.error("PATCH Row Error:", err);
+    res.status(500).json({ error: 'Failed to update row' });
+  }
+});
+
 app.put('/api/settings', async (req, res) => {
   try {
     const { globalCopyBoxes, globalRowNoWidth, maxSearchHistory } = req.body;

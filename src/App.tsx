@@ -289,6 +289,18 @@ function AppContent() {
   const [showSecHist, setShowSecHist] = useState(false);
   const secHistRef = useRef<HTMLDivElement>(null);
   const isSecUndoRef = useRef(false);
+  const pendingSavesRef = useRef(0);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (pendingSavesRef.current > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   const activeSecPage = state.pageConfigs[state.activePage]?.secondarySearchPage;
 
@@ -897,6 +909,10 @@ function AppContent() {
   };
 
   const handleSaveInlineEdit = async (pageName: string, rowId: string, colKey: string, val: string) => {
+    // 1. Close the popover immediately to prevent multiple clicks and UI lag
+    setInlineEdit(null);
+
+    // 2. Optimistically update the local state
     const updatedRows = [...(state.pageRows[pageName] || [])];
     const idx = updatedRows.findIndex(r => r.id === rowId);
     if (idx >= 0) {
@@ -905,17 +921,21 @@ function AppContent() {
         ...prev,
         pageRows: { ...prev.pageRows, [pageName]: updatedRows }
       }));
+      
+      // 3. Save to database in the background
+      pendingSavesRef.current += 1;
       try {
-        await fetch(`/api/pageRows/${encodeURIComponent(pageName)}`, {
-          method: 'PUT',
+        await fetch(`/api/pageRows/${encodeURIComponent(pageName)}/${encodeURIComponent(rowId)}`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rows: updatedRows })
+          body: JSON.stringify({ updates: { [colKey]: val } })
         });
       } catch (e) {
         toast('Failed to save inline edit');
+      } finally {
+        pendingSavesRef.current -= 1;
       }
     }
-    setInlineEdit(null);
   };
 
   const handleCreatePage = async (name: string, columns: Column[]) => {
@@ -1356,10 +1376,10 @@ function AppContent() {
     }
 
     try {
-      await fetch(`/api/pageRows/${encodeURIComponent(targetPage)}`, {
-        method: 'PUT',
+      await fetch(`/api/pageRows/${encodeURIComponent(targetPage)}/${encodeURIComponent(previewContext.rowId)}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: currentRows })
+        body: JSON.stringify({ updates: { [previewContext.imageKey]: newImage.data || newImage } })
       });
 
       setState(prev => ({
@@ -1385,10 +1405,10 @@ function AppContent() {
     }
 
     try {
-      await fetch(`/api/pageRows/${encodeURIComponent(targetPage)}`, {
-        method: 'PUT',
+      await fetch(`/api/pageRows/${encodeURIComponent(targetPage)}/${encodeURIComponent(rowId)}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: currentRows })
+        body: JSON.stringify({ updates: { [imageKey]: '' } })
       });
 
       setState(prev => ({
