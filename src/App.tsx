@@ -485,7 +485,7 @@ function AppContent() {
   const [trackerFilter, setTrackerFilter] = useState<'all' | 'low' | 'zero' | 'high'>('all');
   const [trackerSort, setTrackerSort] = useState<'none' | 'high' | 'low'>('none');
   const [showArchived, setShowArchived] = useState(false);
-  const [inlineEdit, setInlineEdit] = useState<{id: string, colKey: string, val: string} | null>(null);
+  const [inlineEdit, setInlineEdit] = useState<{id: string, colKey: string, val: string, history?: string[], historyPointer?: number} | null>(null);
   const [isSalePromptOpen, setIsSalePromptOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [archiveSearchQuery, setArchiveSearchQuery] = useState("");
@@ -2099,12 +2099,16 @@ function AppContent() {
                                 return (
                                   <td key={col.key} {...commonProps} className={`p-1.5 border-r-[length:medium] border-b-[length:medium] border-[#e0e0e0] ${hoverClass} text-xs relative ${isEditing ? '' : 'overflow-hidden'}`}>
                                     {isEditing && (
-                                      <div className="absolute z-[999] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-2 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.3)] border-2 border-[#2b579a] flex items-center gap-1.5 min-w-[140px]">
+                                      <div className="absolute z-[999] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-2 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.3)] border-2 border-[#2b579a] flex items-center gap-2 min-w-max">
+                                        <div className="flex flex-col gap-1">
+                                          <button title="Undo" onClick={(e) => { e.stopPropagation(); setInlineEdit(prev => { if (!prev || prev.historyPointer === undefined || !prev.history || prev.historyPointer <= 0) return prev; return {...prev, val: prev.history[prev.historyPointer - 1], historyPointer: prev.historyPointer - 1}; }) }} disabled={!inlineEdit?.historyPointer} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-30 rounded px-1.5 py-0.5 border border-gray-300 font-bold">↩️</button>
+                                          <button title="Redo" onClick={(e) => { e.stopPropagation(); setInlineEdit(prev => { if (!prev || prev.historyPointer === undefined || !prev.history || prev.historyPointer >= prev.history.length - 1) return prev; return {...prev, val: prev.history[prev.historyPointer + 1], historyPointer: prev.historyPointer + 1}; }) }} disabled={inlineEdit?.historyPointer === undefined || inlineEdit?.history === undefined || inlineEdit?.historyPointer >= inlineEdit?.history.length - 1} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-30 rounded px-1.5 py-0.5 border border-gray-300 font-bold">↪️</button>
+                                        </div>
                                         <input 
                                           type="number" 
                                           autoFocus 
                                           value={inlineEdit.val} 
-                                          onChange={(e) => setInlineEdit({...inlineEdit, val: e.target.value})}
+                                          onChange={(e) => { const newVal = e.target.value; setInlineEdit(prev => { if (!prev) return prev; const newHist = [...(prev.history || []).slice(0, (prev.historyPointer || 0) + 1), newVal]; return {...prev, val: newVal, history: newHist, historyPointer: newHist.length - 1}; }) }}
                                           onFocus={(e) => e.target.select()}
                                           onWheel={(e) => e.currentTarget.blur()}
                                           onKeyDown={(e) => { 
@@ -2113,11 +2117,13 @@ function AppContent() {
                                           }}
                                           className="w-[80px] text-center text-sm p-1.5 bg-gray-50 outline-none rounded text-black font-bold border border-gray-300 focus:border-[#2b579a] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                                         />
-                                        <button title="Save (Enter)" onClick={() => handleSaveInlineEdit(activePage!, row.id, col.key, inlineEdit.val)} className="bg-green-600 hover:bg-green-700 text-white rounded px-2 py-1.5 text-xs font-bold shadow-sm">✅</button>
-                                        <button title="Cancel (Esc)" onClick={(e) => { e.stopPropagation(); setInlineEdit(null); }} className="bg-red-500 hover:bg-red-600 text-white rounded px-2 py-1.5 text-xs font-bold shadow-sm">❌</button>
+                                        <div className="flex gap-1.5">
+                                          <button title="Save (Enter)" onClick={() => handleSaveInlineEdit(activePage!, row.id, col.key, inlineEdit.val)} className="bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1.5 text-xs font-bold shadow-sm transition-colors">Save</button>
+                                          <button title="Cancel (Esc)" onClick={(e) => { e.stopPropagation(); setInlineEdit(null); }} className="bg-red-500 hover:bg-red-600 text-white rounded px-3 py-1.5 text-xs font-bold shadow-sm transition-colors">Cancel</button>
+                                        </div>
                                       </div>
                                     )}
-                                    <div className="group flex items-center justify-center w-full h-full relative cursor-text min-h-[20px]" onClick={() => setInlineEdit({id: `${row.id}-${col.key}`, colKey: col.key, val: String(rawVal || 0)})}>
+                                    <div className="group flex items-center justify-center w-full h-full relative cursor-text min-h-[20px]" onClick={() => setInlineEdit({id: `${row.id}-${col.key}`, colKey: col.key, val: String(rawVal || 0), history: [String(rawVal || 0)], historyPointer: 0})}>
                                       <span className="text-center w-full">{rawVal || '0'}</span>
                                       <button className="hidden group-hover:block absolute right-1 text-gray-400 hover:text-blue-500 text-[10px]">✏️</button>
                                     </div>
