@@ -2097,26 +2097,30 @@ function AppContent() {
                               if (col.type === 'sale_tracker') {
                                 const isEditing = inlineEdit?.id === `${row.id}-${col.key}`;
                                 return (
-                                  <td key={col.key} {...commonProps} className={`p-1.5 border-r-[length:medium] border-b-[length:medium] border-[#e0e0e0] ${hoverClass} text-xs ${isEditing ? '' : 'overflow-hidden'}`}>
-                                    {isEditing ? (
-                                      <div className="flex h-full w-full items-center justify-center">
+                                  <td key={col.key} {...commonProps} className={`p-1.5 border-r-[length:medium] border-b-[length:medium] border-[#e0e0e0] ${hoverClass} text-xs relative ${isEditing ? '' : 'overflow-hidden'}`}>
+                                    {isEditing && (
+                                      <div className="absolute z-[999] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-2 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.3)] border-2 border-[#2b579a] flex items-center gap-1.5 min-w-[140px]">
                                         <input 
                                           type="number" 
                                           autoFocus 
                                           value={inlineEdit.val} 
                                           onChange={(e) => setInlineEdit({...inlineEdit, val: e.target.value})}
                                           onFocus={(e) => e.target.select()}
-                                          onBlur={() => handleSaveInlineEdit(activePage!, row.id, col.key, inlineEdit.val)}
-                                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveInlineEdit(activePage!, row.id, col.key, inlineEdit.val); }}
-                                          className="w-full text-center text-sm p-2 bg-white outline-none rounded text-black font-bold border-2 border-blue-500" 
+                                          onWheel={(e) => e.currentTarget.blur()}
+                                          onKeyDown={(e) => { 
+                                              if (e.key === 'Enter') handleSaveInlineEdit(activePage!, row.id, col.key, inlineEdit.val); 
+                                              if (e.key === 'Escape') setInlineEdit(null); 
+                                          }}
+                                          className="w-[80px] text-center text-sm p-1.5 bg-gray-50 outline-none rounded text-black font-bold border border-gray-300 focus:border-[#2b579a] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                                         />
-                                      </div>
-                                    ) : (
-                                      <div className="group flex items-center justify-center w-full h-full relative cursor-text min-h-[20px]" onClick={() => setInlineEdit({id: `${row.id}-${col.key}`, colKey: col.key, val: String(rawVal || 0)})}>
-                                        <span className="text-center w-full">{rawVal || '0'}</span>
-                                        <button className="hidden group-hover:block absolute right-1 text-gray-400 hover:text-blue-500 text-[10px]">✏️</button>
+                                        <button title="Save (Enter)" onClick={() => handleSaveInlineEdit(activePage!, row.id, col.key, inlineEdit.val)} className="bg-green-600 hover:bg-green-700 text-white rounded px-2 py-1.5 text-xs font-bold shadow-sm">✅</button>
+                                        <button title="Cancel (Esc)" onClick={(e) => { e.stopPropagation(); setInlineEdit(null); }} className="bg-red-500 hover:bg-red-600 text-white rounded px-2 py-1.5 text-xs font-bold shadow-sm">❌</button>
                                       </div>
                                     )}
+                                    <div className="group flex items-center justify-center w-full h-full relative cursor-text min-h-[20px]" onClick={() => setInlineEdit({id: `${row.id}-${col.key}`, colKey: col.key, val: String(rawVal || 0)})}>
+                                      <span className="text-center w-full">{rawVal || '0'}</span>
+                                      <button className="hidden group-hover:block absolute right-1 text-gray-400 hover:text-blue-500 text-[10px]">✏️</button>
+                                    </div>
                                   </td>
                                 );
                               }
