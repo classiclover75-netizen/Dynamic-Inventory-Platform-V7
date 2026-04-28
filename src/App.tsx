@@ -812,10 +812,10 @@ function AppContent() {
     if (newRowsToAppend.length > 0) {
       const updatedRows = [...trackerRows, ...newRowsToAppend];
       try {
-        await fetch(`/api/pageRows/${encodeURIComponent(trackerName)}`, {
-          method: 'PUT',
+        await fetch(`/api/pageRows/${encodeURIComponent(trackerName)}/append`, {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rows: updatedRows })
+          body: JSON.stringify({ rows: newRowsToAppend })
         });
         setState(prev => ({
           ...prev,
@@ -2766,10 +2766,10 @@ function AppContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ config: updatedConfig })
               }),
-              fetch(`/api/pageRows/${encodeURIComponent(state.activePage)}`, {
-                method: 'PUT',
+              fetch(`/api/pageRows/${encodeURIComponent(state.activePage)}/append`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rows: updatedRows })
+                body: JSON.stringify({ rows: newRows })
               })
             ]);
 
