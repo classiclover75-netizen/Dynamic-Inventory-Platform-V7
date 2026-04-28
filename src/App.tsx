@@ -483,6 +483,7 @@ function AppContent() {
 
   const [importProgress, setImportProgress] = useState<{ message: string, percent: number | null }>({ message: 'Processing...', percent: null });
   const [trackerFilter, setTrackerFilter] = useState<'all' | 'low' | 'zero' | 'high'>('all');
+  const [trackerSort, setTrackerSort] = useState<'none' | 'high' | 'low'>('none');
   const [showArchived, setShowArchived] = useState(false);
   const [inlineEdit, setInlineEdit] = useState<{id: string, colKey: string, val: string} | null>(null);
   const [isSalePromptOpen, setIsSalePromptOpen] = useState(false);
@@ -1502,32 +1503,44 @@ function AppContent() {
         });
       });
     }
-    if (activeConfig.isTrackerPage && trackerFilter !== 'all') {
+    if (activeConfig.isTrackerPage) {
       const saleCols = activeConfig.columns.filter(c => c.type === 'sale_tracker');
       const latestSaleCol = saleCols.length > 0 ? saleCols[0].key : null;
-      rows = rows.filter(row => {
-        const total = parseFloat(String(row.total_qty || 0));
-        const totalSales = saleCols.reduce((sum, c) => sum + parseFloat(String(row[c.key] || 0)), 0);
-        const remaining = total - totalSales;
-        const minStock = activeConfig.minStockAlert || 5;
-        const latestSaleVal = latestSaleCol ? parseFloat(String(row[latestSaleCol] || 0)) : 0;
+      const getNum = (v: any) => { const n = parseFloat(String(v || 0)); return isNaN(n) ? 0 : n; };
 
-        if (trackerFilter === 'low') {
-          return remaining <= minStock;
-        } else if (trackerFilter === 'zero') {
-          return latestSaleVal === 0 || !row[latestSaleCol!];
-        } else if (trackerFilter === 'high') {
-          return latestSaleVal > 0;
+      if (trackerFilter !== 'all') {
+        rows = rows.filter(row => {
+          const total = parseFloat(String(row.total_qty || 0));
+          const totalSales = saleCols.reduce((sum, c) => sum + parseFloat(String(row[c.key] || 0)), 0);
+          const remaining = total - totalSales;
+          const minStock = activeConfig.minStockAlert || 5;
+          const latestSaleVal = latestSaleCol ? parseFloat(String(row[latestSaleCol] || 0)) : 0;
+
+          if (trackerFilter === 'low') {
+            return remaining <= minStock;
+          } else if (trackerFilter === 'zero') {
+            return latestSaleVal === 0 || !row[latestSaleCol!];
+          } else if (trackerFilter === 'high') {
+            return latestSaleVal > 0;
+          }
+          return true;
+        });
+        if (trackerFilter === 'high' && latestSaleCol) {
+           rows = rows.sort((a, b) => getNum(b[latestSaleCol]) - getNum(a[latestSaleCol]));
         }
-        return true;
-      });
-      if (trackerFilter === 'high' && latestSaleCol) {
-         rows = rows.sort((a, b) => parseFloat(String(b[latestSaleCol]||0)) - parseFloat(String(a[latestSaleCol]||0)));
+      }
+
+      if (trackerFilter === 'all' && trackerSort !== 'none' && latestSaleCol) {
+        if (trackerSort === 'high') {
+          rows = [...rows].sort((a, b) => getNum(b[latestSaleCol]) - getNum(a[latestSaleCol]));
+        } else if (trackerSort === 'low') {
+          rows = [...rows].sort((a, b) => getNum(a[latestSaleCol]) - getNum(b[latestSaleCol]));
+        }
       }
     }
 
     return sortRows(rows, activeConfig.columns);
-  }, [activeRows, currentSearch, primarySearchTags, activeConfig.columns, activeConfig.isTrackerPage, activeConfig.minStockAlert, trackerFilter]);
+  }, [activeRows, currentSearch, primarySearchTags, activeConfig.columns, activeConfig.isTrackerPage, activeConfig.minStockAlert, trackerFilter, trackerSort]);
 
   const secondaryFilteredRows = useMemo(() => {
     if (!activeConfig.secondarySearchPage) return [];
@@ -1588,32 +1601,44 @@ function AppContent() {
         });
       });
     }
-    if (secConfig.isTrackerPage && trackerFilter !== 'all') {
+    if (secConfig.isTrackerPage) {
       const saleCols = secConfig.columns.filter(c => c.type === 'sale_tracker');
       const latestSaleCol = saleCols.length > 0 ? saleCols[0].key : null;
-      rows = rows.filter(row => {
-        const total = parseFloat(String(row.total_qty || 0));
-        const totalSales = saleCols.reduce((sum, c) => sum + parseFloat(String(row[c.key] || 0)), 0);
-        const remaining = total - totalSales;
-        const minStock = secConfig.minStockAlert || 5;
-        const latestSaleVal = latestSaleCol ? parseFloat(String(row[latestSaleCol] || 0)) : 0;
+      const getNum = (v: any) => { const n = parseFloat(String(v || 0)); return isNaN(n) ? 0 : n; };
 
-        if (trackerFilter === 'low') {
-          return remaining <= minStock;
-        } else if (trackerFilter === 'zero') {
-          return latestSaleVal === 0 || !row[latestSaleCol!];
-        } else if (trackerFilter === 'high') {
-          return latestSaleVal > 0;
+      if (trackerFilter !== 'all') {
+        rows = rows.filter(row => {
+          const total = parseFloat(String(row.total_qty || 0));
+          const totalSales = saleCols.reduce((sum, c) => sum + parseFloat(String(row[c.key] || 0)), 0);
+          const remaining = total - totalSales;
+          const minStock = secConfig.minStockAlert || 5;
+          const latestSaleVal = latestSaleCol ? parseFloat(String(row[latestSaleCol] || 0)) : 0;
+
+          if (trackerFilter === 'low') {
+            return remaining <= minStock;
+          } else if (trackerFilter === 'zero') {
+            return latestSaleVal === 0 || !row[latestSaleCol!];
+          } else if (trackerFilter === 'high') {
+            return latestSaleVal > 0;
+          }
+          return true;
+        });
+        if (trackerFilter === 'high' && latestSaleCol) {
+           rows = rows.sort((a, b) => getNum(b[latestSaleCol]) - getNum(a[latestSaleCol]));
         }
-        return true;
-      });
-      if (trackerFilter === 'high' && latestSaleCol) {
-         rows = rows.sort((a, b) => parseFloat(String(b[latestSaleCol]||0)) - parseFloat(String(a[latestSaleCol]||0)));
+      }
+
+      if (trackerFilter === 'all' && trackerSort !== 'none' && latestSaleCol) {
+        if (trackerSort === 'high') {
+          rows = [...rows].sort((a, b) => getNum(b[latestSaleCol]) - getNum(a[latestSaleCol]));
+        } else if (trackerSort === 'low') {
+          rows = [...rows].sort((a, b) => getNum(a[latestSaleCol]) - getNum(b[latestSaleCol]));
+        }
       }
     }
 
     return sortRows(rows, secConfig.columns);
-  }, [state.pageRows, state.pageConfigs, activeConfig.secondarySearchPage, secondarySearchQuery, secondarySearchTags, trackerFilter]);
+  }, [state.pageRows, state.pageConfigs, activeConfig.secondarySearchPage, secondarySearchQuery, secondarySearchTags, trackerFilter, trackerSort]);
 
     const highlightText = (text: any, tokens: string[], isGhost: boolean = false) => {
       const strText = decodeHtmlEntities(String(text || ''));
@@ -2155,11 +2180,17 @@ function AppContent() {
             <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded" /> Show History
           </label>
           <div className="flex-1"></div>
-          <div className="flex gap-1 bg-white rounded shadow-sm p-1">
-            <button onClick={() => setTrackerFilter('high')} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'high' ? 'bg-green-100 text-green-800' : 'text-gray-600 hover:bg-gray-100'}`}>⭐ High Sale</button>
-            <button onClick={() => setTrackerFilter('zero')} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'zero' ? 'bg-gray-200 text-gray-800' : 'text-gray-600 hover:bg-gray-100'}`}>0️⃣ Zero Sale</button>
-            <button onClick={() => setTrackerFilter('low')} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'low' ? 'bg-red-100 text-red-800' : 'text-gray-600 hover:bg-gray-100'}`}>🚨 Low Stock</button>
-            <button onClick={() => setTrackerFilter('all')} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'all' ? 'bg-blue-100 text-blue-800' : 'text-gray-600 hover:bg-gray-100'}`}>All</button>
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex gap-1 bg-white rounded shadow-sm p-1">
+              <button onClick={() => { setTrackerFilter('high'); setTrackerSort('none'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'high' ? 'bg-green-100 text-green-800' : 'text-gray-600 hover:bg-gray-100'}`}>⭐ High Sale</button>
+              <button onClick={() => { setTrackerFilter('zero'); setTrackerSort('none'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'zero' ? 'bg-gray-200 text-gray-800' : 'text-gray-600 hover:bg-gray-100'}`}>0️⃣ Zero Sale</button>
+              <button onClick={() => { setTrackerFilter('low'); setTrackerSort('none'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'low' ? 'bg-red-100 text-red-800' : 'text-gray-600 hover:bg-gray-100'}`}>🚨 Low Stock</button>
+              <button onClick={() => { setTrackerFilter('all'); setTrackerSort('none'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'all' && trackerSort === 'none' ? 'bg-blue-100 text-blue-800' : 'text-gray-600 hover:bg-gray-100'}`}>All</button>
+            </div>
+            <div className="flex gap-1 bg-white rounded shadow-sm p-1">
+              <button onClick={() => { setTrackerFilter('all'); setTrackerSort('high'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'all' && trackerSort === 'high' ? 'bg-purple-100 text-purple-800' : 'text-gray-600 hover:bg-gray-100'}`}>⬆️ Sort: High Sale</button>
+              <button onClick={() => { setTrackerFilter('all'); setTrackerSort('low'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'all' && trackerSort === 'low' ? 'bg-purple-100 text-purple-800' : 'text-gray-600 hover:bg-gray-100'}`}>⬇️ Sort: Zero/Low Sale</button>
+            </div>
           </div>
         </div>
       )}
