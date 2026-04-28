@@ -2097,21 +2097,24 @@ function AppContent() {
                               if (col.type === 'sale_tracker') {
                                 const isEditing = inlineEdit?.id === `${row.id}-${col.key}`;
                                 return (
-                                  <td key={col.key} {...commonProps} className={`p-1.5 border-r-[length:medium] border-b-[length:medium] border-[#e0e0e0] ${hoverClass} overflow-hidden align-top text-xs`}>
+                                  <td key={col.key} {...commonProps} className={`p-1.5 border-r-[length:medium] border-b-[length:medium] border-[#e0e0e0] ${hoverClass} align-middle text-xs relative ${isEditing ? 'overflow-visible z-10' : 'overflow-hidden'}`}>
                                     {isEditing ? (
-                                      <input 
-                                        type="number" 
-                                        autoFocus 
-                                        value={inlineEdit.val} 
-                                        onChange={(e) => setInlineEdit({...inlineEdit, val: e.target.value})}
-                                        onBlur={() => handleSaveInlineEdit(activePage!, row.id, col.key, inlineEdit.val)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveInlineEdit(activePage!, row.id, col.key, inlineEdit.val); }}
-                                        className="w-full p-1 border-2 border-blue-500 rounded text-xs" 
-                                      />
+                                      <div className="absolute -inset-[3px] z-50 flex items-center justify-center bg-white shadow-xl border-2 border-blue-500 rounded">
+                                        <input 
+                                          type="number" 
+                                          autoFocus 
+                                          value={inlineEdit.val} 
+                                          onChange={(e) => setInlineEdit({...inlineEdit, val: e.target.value})}
+                                          onFocus={(e) => e.target.select()}
+                                          onBlur={() => handleSaveInlineEdit(activePage!, row.id, col.key, inlineEdit.val)}
+                                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveInlineEdit(activePage!, row.id, col.key, inlineEdit.val); }}
+                                          className="w-full h-full text-center text-sm p-2 outline-none rounded bg-transparent font-bold text-black" 
+                                        />
+                                      </div>
                                     ) : (
-                                      <div className="group flex items-center justify-between w-full h-full relative cursor-text min-h-[20px]" onClick={() => setInlineEdit({id: `${row.id}-${col.key}`, colKey: col.key, val: String(rawVal || 0)})}>
-                                        <span>{rawVal || '0'}</span>
-                                        <button className="hidden group-hover:block absolute right-0 text-gray-400 hover:text-blue-500 text-[10px]">✏️</button>
+                                      <div className="group flex items-center justify-center w-full h-full relative cursor-text min-h-[20px]" onClick={() => setInlineEdit({id: `${row.id}-${col.key}`, colKey: col.key, val: String(rawVal || 0)})}>
+                                        <span className="text-center w-full">{rawVal || '0'}</span>
+                                        <button className="hidden group-hover:block absolute right-1 text-gray-400 hover:text-blue-500 text-[10px]">✏️</button>
                                       </div>
                                     )}
                                   </td>
