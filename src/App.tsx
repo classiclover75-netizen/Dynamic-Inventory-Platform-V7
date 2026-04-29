@@ -2223,26 +2223,6 @@ function AppContent() {
           <label className="flex items-center gap-1 text-xs font-bold text-gray-700 ml-2 cursor-pointer">
             <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded" /> Show History
           </label>
-          {(() => {
-            const availableSaleCols = displayConfig.columns.filter(c => c.type === 'sale_tracker');
-            if (availableSaleCols.length === 0) return null;
-            
-            return (
-              <div className="flex items-center gap-1.5 ml-3 bg-white px-2 py-1 rounded shadow-sm border border-gray-200">
-                <span className="text-xs font-bold text-gray-500">Target Sale:</span>
-                <select 
-                  value={activeFilterSaleCol || ''} 
-                  onChange={(e) => setActiveFilterSaleCol(e.target.value || null)}
-                  className="text-xs font-bold text-[#2b579a] border-none outline-none cursor-pointer bg-transparent w-[150px]"
-                >
-                  <option value="">Latest Sale (Default)</option>
-                  {availableSaleCols.map(c => (
-                    <option key={c.key} value={c.key}>{c.name} {c.archived ? '(Archived)' : ''}</option>
-                  ))}
-                </select>
-              </div>
-            );
-          })()}
           <div className="flex-1"></div>
           <div className="flex flex-wrap gap-2 items-center">
             <div className="flex gap-1 bg-white rounded shadow-sm p-1">
@@ -3038,7 +3018,7 @@ function AppContent() {
       {/* --- ARCHIVE COLUMNS MODAL --- */}
       {isArchiveModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-[450px] shadow-2xl">
+          <div className="bg-white p-6 rounded-lg w-[500px] shadow-2xl">
             <h3 className="text-lg font-bold mb-1 text-[#2b579a]">Archive Columns</h3>
             <p className="text-xs text-gray-500 mb-3">Manually hide or show your custom sale date columns.</p>
             
@@ -3060,19 +3040,47 @@ function AppContent() {
             
             {/* Columns List */}
             <div className="max-h-[300px] overflow-y-auto border-2 border-gray-100 rounded-md p-2 mb-4 bg-gray-50">
+              {archiveSearchQuery === "" && (
+                <div className={`flex justify-between items-center p-2.5 border-b border-gray-200 bg-white mb-1 rounded shadow-sm transition-colors ${activeFilterSaleCol === null ? 'bg-blue-50 border border-blue-300' : 'hover:bg-gray-50'}`}>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-gray-700">Latest Sale (Default)</span>
+                    {activeFilterSaleCol === null && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
+                  </div>
+                  <button 
+                    onClick={() => setActiveFilterSaleCol(null)}
+                    className={`px-3 py-1 rounded text-xs font-bold transition-colors ${activeFilterSaleCol === null ? 'bg-[#2b579a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'}`}
+                  >
+                    {activeFilterSaleCol === null ? '🎯 Target' : 'Set Target'}
+                  </button>
+                </div>
+              )}
               {activeConfig?.columns
                 .filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveSearchQuery.toLowerCase()))
                 .map(col => (
-                <div key={col.key} className="flex justify-between items-center p-2.5 border-b border-gray-200 last:border-b-0 bg-white mb-1 rounded shadow-sm hover:bg-gray-50 transition-colors">
-                  <span className="text-sm font-semibold text-gray-700">
-                    {renderHighlightedText(col.name, archiveSearchQuery)}
-                  </span>
-                  <button 
-                    onClick={() => handleToggleColumnArchive(col.key, !!col.archived)}
-                    className={`px-3 py-1 rounded text-xs font-bold transition-colors ${col.archived ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
-                  >
-                    {col.archived ? '👁️ Show' : '🙈 Hide'}
-                  </button>
+                <div key={col.key} className={`flex justify-between items-center p-2.5 border-b border-gray-200 last:border-b-0 mb-1 rounded shadow-sm transition-colors ${activeFilterSaleCol === col.key ? 'bg-blue-50 border border-blue-300' : 'bg-white hover:bg-gray-50'}`}>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-gray-700">
+                      {renderHighlightedText(col.name, archiveSearchQuery)}
+                    </span>
+                    {activeFilterSaleCol === col.key && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <button 
+                      onClick={() => {
+                        setActiveFilterSaleCol(col.key);
+                        if (col.archived) handleToggleColumnArchive(col.key, true);
+                      }}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-colors ${activeFilterSaleCol === col.key ? 'bg-[#2b579a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'}`}
+                    >
+                      {activeFilterSaleCol === col.key ? '🎯 Target' : 'Set Target'}
+                    </button>
+                    <button 
+                      onClick={() => handleToggleColumnArchive(col.key, !!col.archived)}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-colors ${col.archived ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                    >
+                      {col.archived ? '👁️ Show' : '🙈 Hide'}
+                    </button>
+                  </div>
                 </div>
               ))}
               {activeConfig?.columns.filter(c => c.type === 'sale_tracker').length === 0 && (
