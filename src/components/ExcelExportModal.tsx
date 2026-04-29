@@ -13,10 +13,11 @@ interface ExcelExportModalProps {
   pageName: string;
   columns: Column[];
   rows: RowData[];
+  lowStockIds?: Set<string> | null;
 }
 
 export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
-  isOpen, onClose, onBack, pageName, columns, rows
+  isOpen, onClose, onBack, pageName, columns, rows, lowStockIds
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [localRows, setLocalRows] = useState<RowData[]>(rows);
@@ -24,6 +25,7 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [selectedColumnKeys, setSelectedColumnKeys] = useState<Set<string>>(
     new Set(columns.filter(c => c.key !== 'sr').map(c => c.key))
   );
@@ -48,6 +50,7 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
   React.useEffect(() => {
     if (isOpen) {
       setSelectedColumnKeys(new Set(columns.filter(c => c.key !== 'sr').map(c => c.key)));
+      setShowLowStockOnly(false);
     }
   }, [isOpen, columns]);
 
@@ -102,10 +105,15 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
 
   // Code 2 wala Advanced Tokenized Search
   const filteredRows = useMemo(() => {
-    if (!deferredSearchQuery) return localRows;
+    let baseRows = localRows;
+    if (showLowStockOnly && lowStockIds) {
+      baseRows = baseRows.filter(r => lowStockIds.has(String(r.id)));
+    }
+
+    if (!deferredSearchQuery) return baseRows;
     const tokens = deferredSearchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
     
-    return localRows.filter(row => {
+    return baseRows.filter(row => {
       const searchableValues = Object.values(row).map(val => 
         val !== null && val !== undefined ? String(val) : ''
       );
@@ -134,7 +142,7 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
         return new RegExp(bStart + escaped + bEnd, 'i').test(blob);
       });
     });
-  }, [localRows, deferredSearchQuery]);
+  }, [localRows, deferredSearchQuery, showLowStockOnly, lowStockIds]);
 
   const parseHtmlToRichText = (html: string) => {
     const div = document.createElement('div');
@@ -390,11 +398,22 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
           </div>
         ) : (
           <>
-            <div className="flex gap-4 mb-4 shrink-0">
+            <div className="flex gap-4 mb-4 shrink-0 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-2 top-2.5 text-gray-400" size={16} />
                 <Input className="pl-8" placeholder="Filter rows..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
               </div>
+              {lowStockIds && (
+                <label className="flex items-center gap-2 cursor-pointer bg-red-50 text-red-700 px-3 py-1.5 rounded border border-red-200 font-bold text-sm hover:bg-red-100 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="accent-red-600 w-4 h-4 cursor-pointer"
+                    checked={showLowStockOnly}
+                    onChange={e => setShowLowStockOnly(e.target.checked)}
+                  />
+                  🚨 Low Stock Only
+                </label>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 mb-4 shrink-0 p-3 bg-gray-50 rounded-lg border border-gray-200">

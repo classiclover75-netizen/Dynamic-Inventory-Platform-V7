@@ -2209,6 +2209,38 @@ function AppContent() {
     );
   };
 
+  const currentLowStockIds = useMemo(() => {
+    let trackerConfig = activeConfig.isTrackerPage ? activeConfig : null;
+    let trackerRows = activeRows;
+
+    if (!trackerConfig) {
+      // If on source page, find its linked tracker
+      const linkedEntry = Object.entries(state.pageConfigs).find(
+        ([, cfg]) => (cfg as PageConfig).linkedSourcePage === state.activePage
+      );
+      if (linkedEntry) {
+        trackerConfig = linkedEntry[1] as PageConfig;
+        trackerRows = state.pageRows[linkedEntry[0]] || [];
+      }
+    }
+
+    if (trackerConfig) {
+      const minStock = trackerConfig.minStockAlert || 5;
+      const saleCols = trackerConfig.columns.filter(c => c.type === 'sale_tracker');
+      const ids = new Set<string>();
+      trackerRows.forEach(row => {
+        const total = parseFloat(String(row.total_qty || 0)) || 0;
+        const totalSales = saleCols.reduce((sum, c) => sum + (parseFloat(String(row[c.key] || 0)) || 0), 0);
+        const remaining = total - totalSales;
+        if (remaining <= minStock) {
+          ids.add(String(row.id));
+        }
+      });
+      return ids;
+    }
+    return null; // Return null if no tracker logic applies to current page
+  }, [activeConfig, activeRows, state.activePage, state.pageConfigs, state.pageRows]);
+
   const tableContent = (
     <div className="w-full h-full flex flex-col text-[#333] text-left m-0 p-0">
       {isSecondaryActive && (
@@ -2822,6 +2854,7 @@ function AppContent() {
         pageName={state.activePage}
         columns={activeConfig.columns}
         rows={activeRows}
+        lowStockIds={currentLowStockIds}
       />
 
       <GlobalCopyBoxesSettingsModal
