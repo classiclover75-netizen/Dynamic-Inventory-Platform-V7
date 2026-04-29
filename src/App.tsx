@@ -504,6 +504,7 @@ function AppContent() {
   const [archiveSearchQuery, setArchiveSearchQuery] = useState("");
   const [customSaleName, setCustomSaleName] = useState("");
   const [selectedArchiveCols, setSelectedArchiveCols] = useState<Set<string>>(new Set());
+  const [archiveBulkDeleteConfirm, setArchiveBulkDeleteConfirm] = useState<{type: 'normal' | 'smart', step: number} | null>(null);
 
   const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -3131,12 +3132,53 @@ function AppContent() {
       {/* --- ARCHIVE COLUMNS MODAL --- */}
       {isArchiveModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-[500px] shadow-2xl">
+          <div className="bg-white p-6 rounded-lg w-[500px] shadow-2xl min-h-[400px] flex flex-col">
             <h3 className="text-lg font-bold mb-1 text-[#2b579a]">Archive Columns</h3>
-            <p className="text-xs text-gray-500 mb-3">Manually hide or show your custom sale date columns.</p>
             
-            {/* Search and Bulk Actions */}
-            <div className="mb-3 flex flex-col gap-2">
+            {archiveBulkDeleteConfirm ? (
+              <div className="flex-1 flex flex-col justify-center items-center text-center p-4 animate-in zoom-in duration-200">
+                <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                  {archiveBulkDeleteConfirm.type === 'smart' ? <RefreshCw size={32} /> : <Trash2 size={32} />}
+                </div>
+                <h4 className="text-xl font-bold text-gray-800 mb-2">
+                  {archiveBulkDeleteConfirm.type === 'smart' ? 'Smart Delete' : `Normal Delete (${archiveBulkDeleteConfirm.step}/2)`}
+                </h4>
+                <p className="text-sm text-gray-600 mb-8 font-medium">
+                  {archiveBulkDeleteConfirm.type === 'smart' 
+                    ? `Are you sure? This will permanently deduct sales of ${selectedArchiveCols.size} columns from Total Qty before deleting.`
+                    : archiveBulkDeleteConfirm.step === 1 
+                      ? `Are you sure you want to normal delete ${selectedArchiveCols.size} selected columns? (Use if created by mistake)`
+                      : `ABSOLUTELY sure? This deletes data and reverts remaining quantity for all ${selectedArchiveCols.size} columns.`
+                  }
+                </p>
+                <div className="flex gap-3 w-full">
+                  <button 
+                    onClick={() => setArchiveBulkDeleteConfirm(null)}
+                    className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (archiveBulkDeleteConfirm.type === 'normal' && archiveBulkDeleteConfirm.step === 1) {
+                        setArchiveBulkDeleteConfirm({ type: 'normal', step: 2 });
+                      } else {
+                        handleBulkDeleteSaleColumns(Array.from(selectedArchiveCols), archiveBulkDeleteConfirm.type);
+                        setArchiveBulkDeleteConfirm(null);
+                      }
+                    }}
+                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-lg transition-colors"
+                  >
+                    {archiveBulkDeleteConfirm.type === 'normal' && archiveBulkDeleteConfirm.step === 1 ? 'Yes, Continue' : 'Confirm Delete'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 mb-3">Manually hide or show your custom sale date columns.</p>
+                
+                {/* Search and Bulk Actions */}
+                <div className="mb-3 flex flex-col gap-2">
               <input 
                 type="text" 
                 autoFocus
@@ -3170,36 +3212,13 @@ function AppContent() {
                   <span className="text-[11px] font-bold text-red-800">{selectedArchiveCols.size} selected</span>
                   <div className="flex gap-1.5">
                     <button 
-                      onClick={() => {
-                        setConfirmationModal({
-                          isOpen: true,
-                          title: `Normal Delete (${selectedArchiveCols.size} cols) (1/2)`,
-                          message: "Are you sure? Use this if created by mistake.",
-                          onConfirm: () => {
-                            setTimeout(() => {
-                              setConfirmationModal({
-                                isOpen: true,
-                                title: "Final Confirmation (2/2)",
-                                message: "ABSOLUTELY sure? This deletes data and reverts remaining quantity for all selected columns.",
-                                onConfirm: () => handleBulkDeleteSaleColumns(Array.from(selectedArchiveCols), 'normal')
-                              });
-                            }, 400);
-                          }
-                        });
-                      }}
+                      onClick={() => setArchiveBulkDeleteConfirm({ type: 'normal', step: 1 })}
                       className="px-2 py-1 bg-white text-gray-700 border border-gray-300 hover:bg-gray-100 rounded text-[10px] font-bold transition-colors shadow-sm"
                     >
                       🗑️ Normal Delete
                     </button>
                     <button 
-                      onClick={() => {
-                        setConfirmationModal({
-                          isOpen: true,
-                          title: `Smart Delete (${selectedArchiveCols.size} cols)`,
-                          message: "Are you sure? This permanently deducts sales from Total Qty before deleting to keep stock accurate.",
-                          onConfirm: () => handleBulkDeleteSaleColumns(Array.from(selectedArchiveCols), 'smart')
-                        });
-                      }}
+                      onClick={() => setArchiveBulkDeleteConfirm({ type: 'smart', step: 1 })}
                       className="px-2 py-1 bg-red-600 text-white hover:bg-red-700 rounded text-[10px] font-bold transition-colors shadow-sm"
                     >
                       🧠 Smart Delete
@@ -3210,7 +3229,7 @@ function AppContent() {
             </div>
             
             {/* Columns List */}
-            <div className="max-h-[300px] overflow-y-auto border-2 border-gray-100 rounded-md p-2 mb-4 bg-gray-50">
+            <div className="max-h-[300px] overflow-y-auto border-2 border-gray-100 rounded-md p-2 mb-4 bg-gray-50 flex-1">
               {archiveSearchQuery === "" && (() => {
                 const saleCols = activeConfig?.columns.filter(c => c.type === 'sale_tracker') || [];
                 const latestColName = saleCols.length > 0 ? saleCols[0].name : '';
@@ -3286,14 +3305,16 @@ function AppContent() {
               )}
             </div>
             
-            <div className="flex justify-end">
+            <div className="flex justify-end pt-2">
               <button 
-                onClick={() => { setIsArchiveModalOpen(false); setArchiveSearchQuery(""); setSelectedArchiveCols(new Set()); }} 
+                onClick={() => { setIsArchiveModalOpen(false); setArchiveSearchQuery(""); setSelectedArchiveCols(new Set()); setArchiveBulkDeleteConfirm(null); }} 
                 className="px-5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded font-bold text-sm transition-colors shadow-sm"
               >
                 Close
               </button>
             </div>
+          </>
+        )}
           </div>
         </div>
       )}
