@@ -3058,20 +3058,26 @@ function AppContent() {
             
             {/* Columns List */}
             <div className="max-h-[300px] overflow-y-auto border-2 border-gray-100 rounded-md p-2 mb-4 bg-gray-50">
-              {archiveSearchQuery === "" && (
-                <div className={`flex justify-between items-center p-2.5 border-b border-gray-200 bg-white mb-1 rounded shadow-sm transition-colors ${activeFilterSaleCol === null ? 'bg-blue-50 border border-blue-300' : 'hover:bg-gray-50'}`}>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-gray-700">Latest Sale (Default)</span>
-                    {activeFilterSaleCol === null && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
+              {archiveSearchQuery === "" && (() => {
+                const saleCols = activeConfig?.columns.filter(c => c.type === 'sale_tracker') || [];
+                const latestColName = saleCols.length > 0 ? saleCols[0].name : '';
+                return (
+                  <div className={`flex justify-between items-center p-2.5 border-b border-gray-200 bg-white mb-1 rounded shadow-sm transition-colors ${activeFilterSaleCol === null ? 'bg-blue-50 border border-blue-300' : 'hover:bg-gray-50'}`}>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-gray-700">
+                        Latest Sale (Default) {latestColName && <span className="text-xs text-gray-400 font-normal ml-1">({latestColName})</span>}
+                      </span>
+                      {activeFilterSaleCol === null && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
+                    </div>
+                    <button 
+                      onClick={() => setActiveFilterSaleCol(null)}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-colors ${activeFilterSaleCol === null ? 'bg-[#2b579a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'}`}
+                    >
+                      {activeFilterSaleCol === null ? '🎯 Target' : 'Set Target'}
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => setActiveFilterSaleCol(null)}
-                    className={`px-3 py-1 rounded text-xs font-bold transition-colors ${activeFilterSaleCol === null ? 'bg-[#2b579a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'}`}
-                  >
-                    {activeFilterSaleCol === null ? '🎯 Target' : 'Set Target'}
-                  </button>
-                </div>
-              )}
+                );
+              })()}
               {activeConfig?.columns
                 .filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveSearchQuery.toLowerCase()))
                 .map(col => (
