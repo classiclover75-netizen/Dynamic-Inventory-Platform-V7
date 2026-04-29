@@ -3065,7 +3065,7 @@ function AppContent() {
                   <div className={`flex justify-between items-center p-2.5 border-b border-gray-200 bg-white mb-1 rounded shadow-sm transition-colors ${activeFilterSaleCol === null ? 'bg-blue-50 border border-blue-300' : 'hover:bg-gray-50'}`}>
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold text-gray-700">
-                        Latest Sale (Default) {latestColName && <span className="text-xs text-gray-400 font-normal ml-1">({latestColName})</span>}
+                        Latest Sale (Default) {latestColName && <span className="text-sm font-semibold text-[#00FF00] ml-1">({latestColName})</span>}
                       </span>
                       {activeFilterSaleCol === null && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
                     </div>
