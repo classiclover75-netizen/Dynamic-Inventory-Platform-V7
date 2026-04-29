@@ -27,7 +27,7 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [selectedColumnKeys, setSelectedColumnKeys] = useState<Set<string>>(
-    new Set(columns.filter(c => c.key !== 'sr').map(c => c.key))
+    new Set(columns.filter(c => c.key !== 'sr' && !c.archived).map(c => c.key))
   );
   const { toast } = useToast();
 
@@ -49,7 +49,7 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
   // Reset selected columns when the modal opens or columns change
   React.useEffect(() => {
     if (isOpen) {
-      setSelectedColumnKeys(new Set(columns.filter(c => c.key !== 'sr').map(c => c.key)));
+      setSelectedColumnKeys(new Set(columns.filter(c => c.key !== 'sr' && !c.archived).map(c => c.key)));
       setShowLowStockOnly(false);
     }
   }, [isOpen, columns]);
@@ -421,7 +421,7 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
                 <span className="text-sm font-bold text-gray-700">Export Columns:</span>
                 <div className="flex gap-2">
                   <button 
-                    onClick={() => setSelectedColumnKeys(new Set(columns.filter(c => c.key !== 'sr').map(c => c.key)))}
+                    onClick={() => setSelectedColumnKeys(new Set(columns.filter(c => c.key !== 'sr' && !c.archived).map(c => c.key)))}
                     className="px-2 py-1 text-[10px] font-bold bg-[#2b579a] text-white rounded hover:bg-[#1a3c6d] transition-colors"
                   >
                     Select All
@@ -435,7 +435,7 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
                 </div>
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-2 mt-1">
-                {columns.filter(c => c.key !== 'sr').map(col => (
+                {columns.filter(c => c.key !== 'sr' && !c.archived).map(col => (
                   <label key={col.key} className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-600 hover:text-gray-900">
                     <input 
                       type="checkbox" 
