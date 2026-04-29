@@ -1950,7 +1950,14 @@ function AppContent() {
   };
 
   const activeColumnsWithSum = useMemo(() => {
-    let cols = [...activeConfig.columns];
+    // Enforce explicit 150px width for total and remaining columns so they never shrink
+    let cols = [...activeConfig.columns].map(c => {
+      if (c.key === 'total_qty' || c.key === 'remaining_qty') {
+        return { ...c, width: c.width || 150 };
+      }
+      return c;
+    });
+    
     if (activeCustomSum) {
       const remIdx = cols.findIndex((c) => c.key === "remaining_qty");
       if (remIdx !== -1) {
