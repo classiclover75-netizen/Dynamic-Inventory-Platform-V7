@@ -2675,9 +2675,8 @@ function AppContent() {
                           isGhost && !ghostIds.has(String(row.id))
                         );
                         return (
-                          // @ts-ignore
-                          <Draggable
-                            key={row.id}
+                          {/* @ts-ignore */}
+                          <Draggable key={row.id}
                             draggableId={`${isSecondary ? "sec-" : ""}${row.id}`}
                             index={rowIndex}
                             isDragDisabled={
@@ -4377,11 +4376,7 @@ function AppContent() {
                     }
                   }}
                 />
-                <select
-                  className="w-full border border-gray-300 p-2 rounded text-sm outline-none focus:border-purple-500 bg-white"
-                  value={sumStartCol}
-                  onChange={(e) => setSumStartCol(e.target.value)}
-                >
+                <div className="w-full border border-gray-300 rounded overflow-y-auto bg-white max-h-[130px] shadow-inner">
                   {activeConfig.columns
                     .filter(
                       (c) =>
@@ -4392,11 +4387,27 @@ function AppContent() {
                           c.key === sumStartCol),
                     )
                     .map((c) => (
-                      <option key={c.key} value={c.key}>
-                        {c.name}
-                      </option>
+                      <div
+                        key={c.key}
+                        onClick={() => setSumStartCol(c.key)}
+                        className={`p-2 text-sm cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors flex items-center ${sumStartCol === c.key ? "bg-purple-100 text-purple-900 font-bold border-l-4 border-purple-600" : "hover:bg-purple-50 text-gray-700 border-l-4 border-transparent"}`}
+                      >
+                        {renderHighlightedText(c.name, sumStartSearchQuery)}
+                      </div>
                     ))}
-                </select>
+                  {activeConfig.columns.filter(
+                    (c) =>
+                      c.type === "sale_tracker" &&
+                      (c.name
+                        .toLowerCase()
+                        .includes(sumStartSearchQuery.toLowerCase()) ||
+                        c.key === sumStartCol),
+                  ).length === 0 && (
+                    <div className="p-3 text-sm text-gray-400 text-center italic font-semibold">
+                      No dates found
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* End Column Group */}
@@ -4424,11 +4435,7 @@ function AppContent() {
                     }
                   }}
                 />
-                <select
-                  className="w-full border border-gray-300 p-2 rounded text-sm outline-none focus:border-purple-500 bg-white"
-                  value={sumEndCol}
-                  onChange={(e) => setSumEndCol(e.target.value)}
-                >
+                <div className="w-full border border-gray-300 rounded overflow-y-auto bg-white max-h-[130px] shadow-inner">
                   {activeConfig.columns
                     .filter(
                       (c) =>
@@ -4439,11 +4446,27 @@ function AppContent() {
                           c.key === sumEndCol),
                     )
                     .map((c) => (
-                      <option key={c.key} value={c.key}>
-                        {c.name}
-                      </option>
+                      <div
+                        key={c.key}
+                        onClick={() => setSumEndCol(c.key)}
+                        className={`p-2 text-sm cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors flex items-center ${sumEndCol === c.key ? "bg-purple-100 text-purple-900 font-bold border-l-4 border-purple-600" : "hover:bg-purple-50 text-gray-700 border-l-4 border-transparent"}`}
+                      >
+                        {renderHighlightedText(c.name, sumEndSearchQuery)}
+                      </div>
                     ))}
-                </select>
+                  {activeConfig.columns.filter(
+                    (c) =>
+                      c.type === "sale_tracker" &&
+                      (c.name
+                        .toLowerCase()
+                        .includes(sumEndSearchQuery.toLowerCase()) ||
+                        c.key === sumEndCol),
+                  ).length === 0 && (
+                    <div className="p-3 text-sm text-gray-400 text-center italic font-semibold">
+                      No dates found
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
