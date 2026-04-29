@@ -355,7 +355,7 @@ export const AddRowModal = ({
       newBlocks.pop();
     }
 
-    const activePasteCols = columns.filter(c => c.key !== 'sr' && !c.magicPasteDisabled);
+    const activePasteCols = columns.filter(c => c.key !== 'sr' && !c.magicPasteDisabled && !(c.name && c.name.toLowerCase().includes('remaining qty')));
 
     rows.forEach((rowStr) => {
       // Split by tab and restore newlines
@@ -442,13 +442,13 @@ export const AddRowModal = ({
 
           <div className="flex flex-wrap gap-1.5 mb-2">
             {columns.map((c, idx) => {
-              const isSr = c.key === 'sr';
-              if (isSr) {
+              const isLockedField = c.key === 'sr' || (c.name && c.name.toLowerCase().includes('remaining qty'));
+              if (isLockedField) {
                 return (
                   <div 
                     key={c.key} 
                     className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-yellow-100 text-yellow-800 border-yellow-300 cursor-not-allowed"
-                    title="Row No. is auto-generated"
+                    title="Field is auto-calculated or generated"
                   >
                     <Lock size={10} /> {idx + 1}. {c.name}
                   </div>
@@ -515,18 +515,22 @@ export const AddRowModal = ({
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                {editableCols.map(col => (
+                {editableCols.map(col => {
+                  const isReadOnly = col.name && col.name.toLowerCase().includes('remaining qty');
+                  return (
                   <div key={col.key} className="flex flex-col">
                     <label className="text-xs font-bold text-gray-600 mb-1">{col.name} ({col.type})</label>
                     {col.type === 'multi_text' ? (
+                      <div className={isReadOnly ? 'pointer-events-none opacity-70 bg-gray-50' : ''}>
                       <RichTextEditor 
                         className="w-full min-h-[90px]"
                         placeholder="One value per line (use Shift+Enter for new line)"
                         value={Array.isArray(block[col.key]) ? block[col.key].join('<br>') : block[col.key] || ''}
                         onChange={val => handleUpdateField(i, col.key, val.split(/<br\s*\/?>/i))}
                       />
+                      </div>
                     ) : col.type === 'text_with_copy_button' ? (
-                      <div className="flex flex-col gap-1">
+                      <div className={`flex flex-col gap-1 ${isReadOnly ? 'pointer-events-none opacity-70 bg-gray-50' : ''}`}>
                         {(Array.isArray(block[col.key]) && block[col.key].length > 0 ? block[col.key] : ['']).map((val: string, idx: number, arr: string[]) => {
                           const isCopyDisabled = val.startsWith('!');
                           return (
@@ -711,21 +715,25 @@ export const AddRowModal = ({
                         )}
                       </div>
                     ) : col.type === 'text' ? (
+                      <div className={isReadOnly ? 'pointer-events-none opacity-70 bg-gray-50' : ''}>
                       <RichTextEditor 
                         placeholder={`Enter ${col.name}`}
                         value={block[col.key] || ''}
                         onChange={val => handleUpdateField(i, col.key, val)}
                       />
+                      </div>
                     ) : (
                       <Input 
                         type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
                         placeholder={`Enter ${col.name}`}
                         value={block[col.key] || ''}
                         onChange={e => handleUpdateField(i, col.key, e.target.value)}
+                        disabled={isReadOnly}
+                        className={isReadOnly ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}
                       />
                     )}
                   </div>
-                ))}
+                )})}
               </div>
             </div>
           ))}
