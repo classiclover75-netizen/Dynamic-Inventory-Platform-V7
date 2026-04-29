@@ -691,6 +691,7 @@ function AppContent() {
   const [isSumModalOpen, setIsSumModalOpen] = useState(false);
   const [sumStartCol, setSumStartCol] = useState<string>("");
   const [sumEndCol, setSumEndCol] = useState<string>("");
+  const [sumSearchQuery, setSumSearchQuery] = useState("");
   const [activeCustomSum, setActiveCustomSum] = useState<{
     startName: string;
     endName: string;
@@ -3351,6 +3352,7 @@ function AppContent() {
                   setSumStartCol(saleCols[0].key);
                   setSumEndCol(saleCols[saleCols.length - 1].key);
                 }
+                setSumSearchQuery("");
                 setIsSumModalOpen(true);
               }}
               className="bg-purple-100 text-purple-800 border border-purple-300 px-3 py-1.5 rounded text-xs font-bold shadow-sm hover:bg-purple-200 flex items-center gap-1"
@@ -4349,6 +4351,15 @@ function AppContent() {
               Remaining Qty.
             </p>
 
+            <input
+              type="text"
+              autoFocus
+              placeholder="🔍 Search columns..."
+              className="w-full border-2 border-purple-100 p-2 rounded-md outline-none focus:border-purple-500 text-sm font-semibold transition-colors mb-4"
+              value={sumSearchQuery}
+              onChange={(e) => setSumSearchQuery(e.target.value)}
+            />
+
             <div className="flex flex-col gap-3 mb-5">
               <div>
                 <label className="text-xs font-bold text-gray-700 block mb-1">
@@ -4360,7 +4371,15 @@ function AppContent() {
                   onChange={(e) => setSumStartCol(e.target.value)}
                 >
                   {activeConfig.columns
-                    .filter((c) => c.type === "sale_tracker")
+                    .filter(
+                      (c) =>
+                        c.type === "sale_tracker" &&
+                        (c.name
+                          .toLowerCase()
+                          .includes(sumSearchQuery.toLowerCase()) ||
+                          c.key === sumStartCol ||
+                          c.key === sumEndCol)
+                    )
                     .map((c) => (
                       <option key={c.key} value={c.key}>
                         {c.name}
@@ -4378,7 +4397,15 @@ function AppContent() {
                   onChange={(e) => setSumEndCol(e.target.value)}
                 >
                   {activeConfig.columns
-                    .filter((c) => c.type === "sale_tracker")
+                    .filter(
+                      (c) =>
+                        c.type === "sale_tracker" &&
+                        (c.name
+                          .toLowerCase()
+                          .includes(sumSearchQuery.toLowerCase()) ||
+                          c.key === sumStartCol ||
+                          c.key === sumEndCol)
+                    )
                     .map((c) => (
                       <option key={c.key} value={c.key}>
                         {c.name}
