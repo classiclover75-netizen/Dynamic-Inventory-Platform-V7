@@ -397,9 +397,25 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 mb-4 shrink-0 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <span className="text-sm font-bold text-gray-700">Export Columns:</span>
-              <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <div className="flex flex-col gap-2 mb-4 shrink-0 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-gray-700">Export Columns:</span>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setSelectedColumnKeys(new Set(columns.filter(c => c.key !== 'sr').map(c => c.key)))}
+                    className="px-2 py-1 text-[10px] font-bold bg-[#2b579a] text-white rounded hover:bg-[#1a3c6d] transition-colors"
+                  >
+                    Select All
+                  </button>
+                  <button 
+                    onClick={() => setSelectedColumnKeys(new Set())}
+                    className="px-2 py-1 text-[10px] font-bold bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors border border-gray-300"
+                  >
+                    Select None
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-1">
                 {columns.filter(c => c.key !== 'sr').map(col => (
                   <label key={col.key} className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-600 hover:text-gray-900">
                     <input 
