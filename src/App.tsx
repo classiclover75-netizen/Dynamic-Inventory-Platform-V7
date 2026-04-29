@@ -503,6 +503,7 @@ function AppContent() {
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [archiveSearchQuery, setArchiveSearchQuery] = useState("");
   const [customSaleName, setCustomSaleName] = useState("");
+  const [selectedArchiveCols, setSelectedArchiveCols] = useState<Set<string>>(new Set());
 
   const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1039,6 +1040,39 @@ function AppContent() {
 
     await handleSaveRows(updatedRows, state.activePage, true);
     toast(`Column "${column.name}" deleted successfully (${deleteType} mode).`);
+  };
+
+  const handleBulkDeleteSaleColumns = async (colKeys: string[], deleteType: 'normal' | 'smart') => {
+    if (!state.activePage || colKeys.length === 0) return;
+    
+    const colKeysSet = new Set(colKeys);
+    const updatedColumns = activeConfig.columns.filter(c => !colKeysSet.has(c.key));
+    
+    const newConfig = { ...activeConfig, columns: updatedColumns };
+    await handleSaveActivePageSettings(newConfig, false);
+
+    const updatedRows = activeRows.map(row => {
+      const newRow = { ...row };
+      if (deleteType === 'smart') {
+        let totalDeduction = 0;
+        for (const key of colKeys) {
+          totalDeduction += parseFloat(String(row[key] || 0)) || 0;
+        }
+        const totalQty = parseFloat(String(row.total_qty || 0)) || 0;
+        newRow.total_qty = String(totalQty - totalDeduction);
+      }
+      for (const key of colKeys) {
+        delete newRow[key];
+      }
+      return newRow;
+    });
+
+    await handleSaveRows(updatedRows, state.activePage, true);
+    toast(`${colKeys.length} column(s) deleted successfully (${deleteType} mode).`);
+    setSelectedArchiveCols(new Set());
+    if (activeFilterSaleCol && colKeysSet.has(activeFilterSaleCol)) {
+      setActiveFilterSaleCol(null);
+    }
   };
 
   const handleDeletePage = async () => {
@@ -3111,10 +3145,68 @@ function AppContent() {
                 value={archiveSearchQuery}
                 onChange={(e) => setArchiveSearchQuery(e.target.value)}
               />
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => handleBulkArchiveToggle(false)} className="px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded text-xs font-bold transition-colors border border-green-200 shadow-sm">👁️ Show All</button>
-                <button onClick={() => handleBulkArchiveToggle(true)} className="px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs font-bold transition-colors border border-red-200 shadow-sm">🙈 Hide All</button>
+              <div className="flex justify-between items-center">
+                <button 
+                  onClick={() => {
+                    const filteredCols = activeConfig?.columns.filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveSearchQuery.toLowerCase())) || [];
+                    if (selectedArchiveCols.size === filteredCols.length && filteredCols.length > 0) {
+                      setSelectedArchiveCols(new Set());
+                    } else {
+                      setSelectedArchiveCols(new Set(filteredCols.map(c => c.key)));
+                    }
+                  }} 
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold transition-colors border border-gray-300 shadow-sm"
+                >
+                  {(activeConfig?.columns.filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveSearchQuery.toLowerCase())).length === selectedArchiveCols.size && selectedArchiveCols.size > 0) ? '☒ Deselect All' : '☑ Select All'}
+                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => handleBulkArchiveToggle(false)} className="px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded text-xs font-bold transition-colors border border-green-200 shadow-sm">👁️ Show All</button>
+                  <button onClick={() => handleBulkArchiveToggle(true)} className="px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs font-bold transition-colors border border-red-200 shadow-sm">🙈 Hide All</button>
+                </div>
               </div>
+              
+              {selectedArchiveCols.size > 0 && (
+                <div className="flex gap-2 justify-between items-center p-2 bg-red-50 border border-red-200 rounded-md mt-1 animate-in fade-in">
+                  <span className="text-[11px] font-bold text-red-800">{selectedArchiveCols.size} selected</span>
+                  <div className="flex gap-1.5">
+                    <button 
+                      onClick={() => {
+                        setConfirmationModal({
+                          isOpen: true,
+                          title: `Normal Delete (${selectedArchiveCols.size} cols) (1/2)`,
+                          message: "Are you sure? Use this if created by mistake.",
+                          onConfirm: () => {
+                            setTimeout(() => {
+                              setConfirmationModal({
+                                isOpen: true,
+                                title: "Final Confirmation (2/2)",
+                                message: "ABSOLUTELY sure? This deletes data and reverts remaining quantity for all selected columns.",
+                                onConfirm: () => handleBulkDeleteSaleColumns(Array.from(selectedArchiveCols), 'normal')
+                              });
+                            }, 400);
+                          }
+                        });
+                      }}
+                      className="px-2 py-1 bg-white text-gray-700 border border-gray-300 hover:bg-gray-100 rounded text-[10px] font-bold transition-colors shadow-sm"
+                    >
+                      🗑️ Normal Delete
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setConfirmationModal({
+                          isOpen: true,
+                          title: `Smart Delete (${selectedArchiveCols.size} cols)`,
+                          message: "Are you sure? This permanently deducts sales from Total Qty before deleting to keep stock accurate.",
+                          onConfirm: () => handleBulkDeleteSaleColumns(Array.from(selectedArchiveCols), 'smart')
+                        });
+                      }}
+                      className="px-2 py-1 bg-red-600 text-white hover:bg-red-700 rounded text-[10px] font-bold transition-colors shadow-sm"
+                    >
+                      🧠 Smart Delete
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* Columns List */}
@@ -3143,11 +3235,29 @@ function AppContent() {
                 .filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveSearchQuery.toLowerCase()))
                 .map(col => (
                 <div key={col.key} className={`flex justify-between items-center p-2.5 border-b border-gray-200 last:border-b-0 mb-1 rounded shadow-sm transition-colors ${activeFilterSaleCol === col.key ? 'bg-blue-50 border border-blue-300' : 'bg-white hover:bg-gray-50'}`}>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-gray-700">
-                      {renderHighlightedText(col.name, archiveSearchQuery)}
-                    </span>
-                    {activeFilterSaleCol === col.key && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
+                  <div className="flex items-center gap-2.5">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 accent-[#2b579a] cursor-pointer"
+                      checked={selectedArchiveCols.has(col.key)}
+                      onChange={(e) => {
+                        const next = new Set(selectedArchiveCols);
+                        if (e.target.checked) next.add(col.key);
+                        else next.delete(col.key);
+                        setSelectedArchiveCols(next);
+                      }}
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-gray-700 cursor-pointer" onClick={() => {
+                        const next = new Set(selectedArchiveCols);
+                        if (next.has(col.key)) next.delete(col.key);
+                        else next.add(col.key);
+                        setSelectedArchiveCols(next);
+                      }}>
+                        {renderHighlightedText(col.name, archiveSearchQuery)}
+                      </span>
+                      {activeFilterSaleCol === col.key && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
+                    </div>
                   </div>
                   <div className="flex gap-2 items-center">
                     <button 
@@ -3178,7 +3288,7 @@ function AppContent() {
             
             <div className="flex justify-end">
               <button 
-                onClick={() => { setIsArchiveModalOpen(false); setArchiveSearchQuery(""); }} 
+                onClick={() => { setIsArchiveModalOpen(false); setArchiveSearchQuery(""); setSelectedArchiveCols(new Set()); }} 
                 className="px-5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded font-bold text-sm transition-colors shadow-sm"
               >
                 Close
