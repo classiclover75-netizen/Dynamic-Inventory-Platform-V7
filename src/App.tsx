@@ -2224,16 +2224,34 @@ function AppContent() {
             <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded" /> Show History
           </label>
           <div className="flex-1"></div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <div className="flex gap-1 bg-white rounded shadow-sm p-1">
-              <button onClick={() => { setTrackerFilter('high'); setTrackerSort('none'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'high' ? 'bg-green-100 text-green-800' : 'text-gray-600 hover:bg-gray-100'}`}>⭐ High Sale</button>
-              <button onClick={() => { setTrackerFilter('zero'); setTrackerSort('none'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'zero' ? 'bg-gray-200 text-gray-800' : 'text-gray-600 hover:bg-gray-100'}`}>0️⃣ Zero Sale</button>
-              <button onClick={() => { setTrackerFilter('low'); setTrackerSort('none'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'low' ? 'bg-red-100 text-red-800' : 'text-gray-600 hover:bg-gray-100'}`}>🚨 Low Stock</button>
-              <button onClick={() => { setTrackerFilter('all'); setTrackerSort('none'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'all' && trackerSort === 'none' ? 'bg-blue-100 text-blue-800' : 'text-gray-600 hover:bg-gray-100'}`}>All</button>
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Filter Dropdown */}
+            <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded shadow-sm border border-gray-200">
+              <span className="text-xs font-bold text-gray-500 flex items-center gap-1">🔍 Filter:</span>
+              <select 
+                value={trackerFilter} 
+                onChange={(e) => setTrackerFilter(e.target.value as any)}
+                className="text-xs font-bold text-[#2b579a] border-none outline-none cursor-pointer bg-transparent"
+              >
+                <option value="all">🟢 All Data (Reset)</option>
+                <option value="high">⭐ High Sale</option>
+                <option value="zero">0️⃣ Zero Sale</option>
+                <option value="low">🚨 Low Stock</option>
+              </select>
             </div>
-            <div className="flex gap-1 bg-white rounded shadow-sm p-1">
-              <button onClick={() => { setTrackerFilter('all'); setTrackerSort('high'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'all' && trackerSort === 'high' ? 'bg-purple-100 text-purple-800' : 'text-gray-600 hover:bg-gray-100'}`}>⬆️ Sort: High Sale</button>
-              <button onClick={() => { setTrackerFilter('all'); setTrackerSort('low'); }} className={`px-2 py-1 rounded text-xs font-bold ${trackerFilter === 'all' && trackerSort === 'low' ? 'bg-purple-100 text-purple-800' : 'text-gray-600 hover:bg-gray-100'}`}>⬇️ Sort: Zero/Low Sale</button>
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded shadow-sm border border-gray-200">
+              <span className="text-xs font-bold text-gray-500 flex items-center gap-1">↕️ Sort:</span>
+              <select 
+                value={trackerSort} 
+                onChange={(e) => setTrackerSort(e.target.value as any)}
+                className="text-xs font-bold text-[#2b579a] border-none outline-none cursor-pointer bg-transparent"
+              >
+                <option value="none">🟢 Default (Reset)</option>
+                <option value="high">⬆️ High Sale First</option>
+                <option value="low">⬇️ Low Sale First</option>
+              </select>
             </div>
           </div>
         </div>
