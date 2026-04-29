@@ -41,6 +41,19 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
     return `/uploads/${imgData}`;
   };
 
+  const getCellValue = (row: RowData, col: Column) => {
+    if (col.key === 'remaining_qty') {
+      const total = parseFloat(String(row.total_qty || 0)) || 0;
+      const saleCols = columns.filter(c => c.type === 'sale_tracker');
+      const totalSales = saleCols.reduce((sum, c) => sum + (parseFloat(String(row[c.key] || 0)) || 0), 0);
+      return String(total - totalSales);
+    }
+    if (col.type === 'sale_tracker') {
+      return String(row[col.key] || '0');
+    }
+    return row[col.key];
+  };
+
   // Sync localRows when rows prop changes
   React.useEffect(() => {
     setLocalRows(rows);
@@ -114,9 +127,10 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
     const tokens = deferredSearchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
     
     return baseRows.filter(row => {
-      const searchableValues = Object.values(row).map(val => 
-        val !== null && val !== undefined ? String(val) : ''
-      );
+      const searchableValues = columns.map(col => {
+        const val = getCellValue(row, col);
+        return val !== null && val !== undefined ? String(val) : '';
+      });
       const blob = searchableValues.join(' ')
         .replace(/<[^>]*>/g, '')
         .replace(/<br\s*\/?>/gi, ' ')
@@ -252,7 +266,7 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
           if (col.type === 'image') {
             rowValues[col.key] = ''; // Text clear karein
           } else {
-            let val = rowData[col.key];
+            let val = getCellValue(rowData, col);
             if (Array.isArray(val)) {
               val = val.join('<br>');
             } else {
@@ -489,14 +503,17 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
                           }} 
                         />
                       </td>
-                      {exportColumns.map(c => (
-                        <td key={c.key} className="p-2 border whitespace-pre-wrap break-words min-w-[150px]">
-                          {c.type === 'image' && row[c.key] ? 
-                            <img src={getImageUrl(row[c.key])} className="h-10 w-10 object-contain mx-auto rounded" alt="img" /> 
-                            : highlightText(String(row[c.key] || ''), deferredSearchQuery)
-                          }
-                        </td>
-                      ))}
+                      {exportColumns.map(c => {
+                        const rawVal = getCellValue(row, c);
+                        return (
+                          <td key={c.key} className="p-2 border whitespace-pre-wrap break-words min-w-[150px]">
+                            {c.type === 'image' && rawVal ? 
+                              <img src={getImageUrl(rawVal)} className="h-10 w-10 object-contain mx-auto rounded" alt="img" /> 
+                              : highlightText(String(rawVal || ''), deferredSearchQuery)
+                            }
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                   {filteredRows.length === 0 && (
