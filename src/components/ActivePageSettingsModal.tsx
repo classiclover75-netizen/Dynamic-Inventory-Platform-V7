@@ -62,7 +62,7 @@ export const ActivePageSettingsModal = ({
   const [localColumns, setLocalColumns] = useState<Column[]>(pageConfig?.columns || []);
   const [secondarySearchPage, setSecondarySearchPage] = useState<string>(pageConfig?.secondarySearchPage || '');
   const [sortSettingsColumn, setSortSettingsColumn] = useState<Column | null>(null);
-  const [deleteColumnMode, setDeleteColumnMode] = useState<Column | null>(null);
+  const [pendingDeleteSaleCol, setPendingDeleteSaleCol] = useState<Column | null>(null);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -144,6 +144,48 @@ export const ActivePageSettingsModal = ({
       <div className="text-xs text-[#607d8b] mb-2 font-bold">
         Page: <span className="text-gray-800">{activePage || 'No page selected'}</span>
       </div>
+      {pendingDeleteSaleCol && (
+        <div className="mb-4 p-4 border-2 border-red-400 bg-red-50 rounded-lg shadow-sm">
+          <h4 className="text-red-700 font-bold mb-2">Delete Sale Column: {pendingDeleteSaleCol.name}</h4>
+          <p className="text-xs text-gray-700 mb-4 font-semibold">Choose how you want to delete this sale data:</p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => { 
+                if (onDeleteColumn) {
+                  onDeleteColumn(pendingDeleteSaleCol, 'normal'); 
+                } else {
+                  const cols = localColumns.filter(col => col.key !== pendingDeleteSaleCol.key);
+                  setLocalColumns(cols);
+                  saveConfig({ columns: cols }, false);
+                }
+                setPendingDeleteSaleCol(null); 
+              }}
+              className="text-left p-3 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-100 transition-colors"
+            >
+              <div className="font-bold text-gray-800 text-sm">🗑️ Normal Delete (Mistake)</div>
+              <div className="text-[11px] text-gray-500 mt-1 font-semibold">Deletes column and reverts Remaining Qty. Use if this column was created by mistake.</div>
+            </button>
+            <button
+              onClick={() => { 
+                if (onDeleteColumn) {
+                  onDeleteColumn(pendingDeleteSaleCol, 'smart'); 
+                }
+                setPendingDeleteSaleCol(null); 
+              }}
+              className="text-left p-3 bg-red-600 text-white border border-red-700 rounded shadow-sm hover:bg-red-700 transition-colors"
+            >
+              <div className="font-bold text-sm">🧠 Smart Delete (Purge Old Data)</div>
+              <div className="text-[11px] text-red-200 mt-1 font-semibold">Permanently deducts these sales from Total Qty before deleting to keep stock accurate.</div>
+            </button>
+            <button
+              onClick={() => setPendingDeleteSaleCol(null)}
+              className="mt-1 text-center p-2 text-gray-600 font-bold text-xs hover:underline cursor-pointer border-none bg-transparent"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       <div className="border border-gray-200 rounded-md p-2.5 bg-gray-50 mb-2.5">
         <label className="flex items-center justify-between gap-2.5 m-0 cursor-pointer">
           <span className="text-[13px] text-[#37474f] font-bold">Row Height</span>
@@ -438,12 +480,12 @@ export const ActivePageSettingsModal = ({
                                   className="border-0 bg-transparent cursor-pointer text-red-600 hover:text-red-800 p-1 flex items-center justify-center"
                                   onClick={() => {
                                     if (c.type === 'sale_tracker') {
-                                      setDeleteColumnMode(c);
+                                      setPendingDeleteSaleCol(c);
                                     } else {
                                       setConfirmationModal({
                                         isOpen: true,
-                                        title: "Confirm Column Deletion",
-                                        message: `Are you sure you want to delete column "${c.name}"? This cannot be undone.`,
+                                        title: "Delete Column",
+                                        message: `Are you sure you want to delete "${c.name}"?`,
                                         onConfirm: () => {
                                           if (onDeleteColumn) {
                                             onDeleteColumn(c, 'normal');
@@ -474,48 +516,7 @@ export const ActivePageSettingsModal = ({
           </Droppable>
         </DragDropContext>
       </div>
-      {deleteColumnMode && (
-        <Modal 
-          isOpen={true} 
-          onClose={() => setDeleteColumnMode(null)} 
-          title={`🗑️ Delete Column "${deleteColumnMode.name}"`}
-          width="400px"
-        >
-          <div className="p-4 space-y-4">
-            <Button 
-              variant="red" 
-              className="w-full text-left justify-start h-auto py-3 px-4 flex flex-col gap-1 items-start"
-              onClick={() => {
-                if (onDeleteColumn) {
-                  onDeleteColumn(deleteColumnMode, 'normal');
-                } else {
-                  const cols = localColumns.filter(col => col.key !== deleteColumnMode.key);
-                  setLocalColumns(cols);
-                  saveConfig({ columns: cols }, false);
-                }
-                setDeleteColumnMode(null);
-              }}
-            >
-              <div className="font-bold">🗑️ Normal Delete (Mistake)</div>
-              <div className="text-xs opacity-90 whitespace-normal text-left font-normal border-t border-red-300/30 pt-1">Use this if the column was created by mistake. It will just delete the data and revert the remaining quantity.</div>
-            </Button>
 
-            <Button 
-              variant="outline" 
-              className="w-full text-left justify-start h-auto py-3 px-4 flex flex-col gap-1 items-start border-red-200 hover:bg-red-50 text-red-700"
-              onClick={() => {
-                if (onDeleteColumn) {
-                  onDeleteColumn(deleteColumnMode, 'smart');
-                }
-                setDeleteColumnMode(null);
-              }}
-            >
-              <div className="font-bold">🧠 Smart Delete (Purge Old Data)</div>
-              <div className="text-xs opacity-90 whitespace-normal text-left font-normal border-t border-red-300/30 pt-1">Use this for old columns. It will permanently deduct these sales from your Total Qty before deleting, keeping your current remaining stock accurate.</div>
-            </Button>
-          </div>
-        </Modal>
-      )}
       <ColumnSortSettingsModal
         isOpen={!!sortSettingsColumn}
         onClose={() => setSortSettingsColumn(null)}
