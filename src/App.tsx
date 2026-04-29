@@ -501,6 +501,8 @@ function AppContent() {
   const [inlineEdit, setInlineEdit] = useState<{id: string, colKey: string, val: string, history?: string[], historyPointer?: number} | null>(null);
   const [isSalePromptOpen, setIsSalePromptOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [isArchiveDeleteModalOpen, setIsArchiveDeleteModalOpen] = useState(false);
+  const [archiveDeleteSearchQuery, setArchiveDeleteSearchQuery] = useState("");
   const [archiveSearchQuery, setArchiveSearchQuery] = useState("");
   const [customSaleName, setCustomSaleName] = useState("");
   const [selectedArchiveCols, setSelectedArchiveCols] = useState<Set<string>>(new Set());
@@ -3133,7 +3135,109 @@ function AppContent() {
       {isArchiveModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg w-[500px] shadow-2xl min-h-[400px] flex flex-col">
-            <h3 className="text-lg font-bold mb-1 text-[#2b579a]">Archive Columns</h3>
+            <div className="flex justify-between items-center mb-1">
+               <h3 className="text-lg font-bold text-[#2b579a]">Archive Columns</h3>
+               <button 
+                 onClick={() => {
+                   setIsArchiveModalOpen(false);
+                   setIsArchiveDeleteModalOpen(true);
+                   setSelectedArchiveCols(new Set());
+                 }}
+                 className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded shadow-sm text-xs font-bold flex items-center gap-1 transition-colors"
+               >
+                 🗑️ Delete Columns
+               </button>
+            </div>
+            
+            <p className="text-xs text-gray-500 mb-3">Manually hide or show your custom sale date columns.</p>
+            
+            <div className="mb-3 flex flex-col gap-2">
+              <input 
+                type="text" 
+                autoFocus
+                placeholder="🔍 Search dates or columns..." 
+                className="w-full border-2 border-[#d7dde1] p-2 rounded-md outline-none focus:border-[#2b579a] text-sm font-semibold transition-colors"
+                value={archiveSearchQuery}
+                onChange={(e) => setArchiveSearchQuery(e.target.value)}
+              />
+              <div className="flex justify-end gap-2">
+                  <button onClick={() => handleBulkArchiveToggle(false)} className="px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded text-xs font-bold transition-colors border border-green-200 shadow-sm">👁️ Show All</button>
+                  <button onClick={() => handleBulkArchiveToggle(true)} className="px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs font-bold transition-colors border border-red-200 shadow-sm">🙈 Hide All</button>
+              </div>
+            </div>
+            
+            {/* Columns List */}
+            <div className="max-h-[300px] overflow-y-auto border-2 border-gray-100 rounded-md p-2 mb-4 bg-gray-50 flex-1">
+              {archiveSearchQuery === "" && (() => {
+                const saleCols = activeConfig?.columns.filter(c => c.type === 'sale_tracker') || [];
+                const latestColName = saleCols.length > 0 ? saleCols[0].name : '';
+                return (
+                  <div className={`flex justify-between items-center p-2.5 border-b border-gray-200 bg-white mb-1 rounded shadow-sm transition-colors ${activeFilterSaleCol === null ? 'bg-blue-50 border border-blue-300' : 'hover:bg-gray-50'}`}>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-gray-700">
+                        Latest Sale (Default) {latestColName && <span className="text-sm font-semibold text-[#FFA500] ml-1">({latestColName})</span>}
+                      </span>
+                      {activeFilterSaleCol === null && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
+                    </div>
+                    <button 
+                      onClick={() => setActiveFilterSaleCol(null)}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-colors ${activeFilterSaleCol === null ? 'bg-[#2b579a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'}`}
+                    >
+                      {activeFilterSaleCol === null ? '🎯 Target' : 'Set Target'}
+                    </button>
+                  </div>
+                );
+              })()}
+              {activeConfig?.columns
+                .filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveSearchQuery.toLowerCase()))
+                .map(col => (
+                <div key={col.key} className={`flex justify-between items-center p-2.5 border-b border-gray-200 last:border-b-0 mb-1 rounded shadow-sm transition-colors ${activeFilterSaleCol === col.key ? 'bg-blue-50 border border-blue-300' : 'bg-white hover:bg-gray-50'}`}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-gray-700">
+                        {renderHighlightedText(col.name, archiveSearchQuery)}
+                      </span>
+                      {activeFilterSaleCol === col.key && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <button 
+                      onClick={() => {
+                        setActiveFilterSaleCol(col.key);
+                        if (col.archived) handleToggleColumnArchive(col.key, true);
+                      }}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-colors ${activeFilterSaleCol === col.key ? 'bg-[#2b579a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'}`}
+                    >
+                      {activeFilterSaleCol === col.key ? '🎯 Target' : 'Set Target'}
+                    </button>
+                    <button 
+                      onClick={() => handleToggleColumnArchive(col.key, !!col.archived)}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-colors ${col.archived ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                    >
+                      {col.archived ? '👁️ Show' : '🙈 Hide'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex justify-end pt-2">
+              <button 
+                onClick={() => { setIsArchiveModalOpen(false); setArchiveSearchQuery(""); }} 
+                className="px-5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded font-bold text-sm transition-colors shadow-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- ARCHIVE DELETE MODAL --- */}
+      {isArchiveDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg w-[500px] shadow-2xl min-h-[400px] flex flex-col">
+            <h3 className="text-lg font-bold mb-1 text-red-700">Delete Sale Columns</h3>
             
             {archiveBulkDeleteConfirm ? (
               <div className="flex-1 flex flex-col justify-center items-center text-center p-4 animate-in zoom-in duration-200">
@@ -3175,146 +3279,109 @@ function AppContent() {
               </div>
             ) : (
               <>
-                <p className="text-xs text-gray-500 mb-3">Manually hide or show your custom sale date columns.</p>
+                <p className="text-xs text-gray-500 mb-3">Select old sale columns you want to permanently remove.</p>
                 
-                {/* Search and Bulk Actions */}
                 <div className="mb-3 flex flex-col gap-2">
-              <input 
-                type="text" 
-                autoFocus
-                placeholder="🔍 Search dates or columns..." 
-                className="w-full border-2 border-[#d7dde1] p-2 rounded-md outline-none focus:border-[#2b579a] text-sm font-semibold transition-colors"
-                value={archiveSearchQuery}
-                onChange={(e) => setArchiveSearchQuery(e.target.value)}
-              />
-              <div className="flex justify-between items-center">
-                <button 
-                  onClick={() => {
-                    const filteredCols = activeConfig?.columns.filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveSearchQuery.toLowerCase())) || [];
-                    if (selectedArchiveCols.size === filteredCols.length && filteredCols.length > 0) {
-                      setSelectedArchiveCols(new Set());
-                    } else {
-                      setSelectedArchiveCols(new Set(filteredCols.map(c => c.key)));
-                    }
-                  }} 
-                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold transition-colors border border-gray-300 shadow-sm"
-                >
-                  {(activeConfig?.columns.filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveSearchQuery.toLowerCase())).length === selectedArchiveCols.size && selectedArchiveCols.size > 0) ? '☒ Deselect All' : '☑ Select All'}
-                </button>
-                <div className="flex gap-2">
-                  <button onClick={() => handleBulkArchiveToggle(false)} className="px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded text-xs font-bold transition-colors border border-green-200 shadow-sm">👁️ Show All</button>
-                  <button onClick={() => handleBulkArchiveToggle(true)} className="px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs font-bold transition-colors border border-red-200 shadow-sm">🙈 Hide All</button>
-                </div>
-              </div>
-              
-              {selectedArchiveCols.size > 0 && (
-                <div className="flex gap-2 justify-between items-center p-2 bg-red-50 border border-red-200 rounded-md mt-1 animate-in fade-in">
-                  <span className="text-[11px] font-bold text-red-800">{selectedArchiveCols.size} selected</span>
-                  <div className="flex gap-1.5">
-                    <button 
-                      onClick={() => setArchiveBulkDeleteConfirm({ type: 'normal', step: 1 })}
-                      className="px-2 py-1 bg-white text-gray-700 border border-gray-300 hover:bg-gray-100 rounded text-[10px] font-bold transition-colors shadow-sm"
-                    >
-                      🗑️ Normal Delete
-                    </button>
-                    <button 
-                      onClick={() => setArchiveBulkDeleteConfirm({ type: 'smart', step: 1 })}
-                      className="px-2 py-1 bg-red-600 text-white hover:bg-red-700 rounded text-[10px] font-bold transition-colors shadow-sm"
-                    >
-                      🧠 Smart Delete
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Columns List */}
-            <div className="max-h-[300px] overflow-y-auto border-2 border-gray-100 rounded-md p-2 mb-4 bg-gray-50 flex-1">
-              {archiveSearchQuery === "" && (() => {
-                const saleCols = activeConfig?.columns.filter(c => c.type === 'sale_tracker') || [];
-                const latestColName = saleCols.length > 0 ? saleCols[0].name : '';
-                return (
-                  <div className={`flex justify-between items-center p-2.5 border-b border-gray-200 bg-white mb-1 rounded shadow-sm transition-colors ${activeFilterSaleCol === null ? 'bg-blue-50 border border-blue-300' : 'hover:bg-gray-50'}`}>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-gray-700">
-                        Latest Sale (Default) {latestColName && <span className="text-sm font-semibold text-[#FFA500] ml-1">({latestColName})</span>}
-                      </span>
-                      {activeFilterSaleCol === null && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
-                    </div>
-                    <button 
-                      onClick={() => setActiveFilterSaleCol(null)}
-                      className={`px-3 py-1 rounded text-xs font-bold transition-colors ${activeFilterSaleCol === null ? 'bg-[#2b579a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'}`}
-                    >
-                      {activeFilterSaleCol === null ? '🎯 Target' : 'Set Target'}
-                    </button>
-                  </div>
-                );
-              })()}
-              {activeConfig?.columns
-                .filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveSearchQuery.toLowerCase()))
-                .map(col => (
-                <div key={col.key} className={`flex justify-between items-center p-2.5 border-b border-gray-200 last:border-b-0 mb-1 rounded shadow-sm transition-colors ${activeFilterSaleCol === col.key ? 'bg-blue-50 border border-blue-300' : 'bg-white hover:bg-gray-50'}`}>
-                  <div className="flex items-center gap-2.5">
-                    <input 
-                      type="checkbox" 
-                      className="w-4 h-4 accent-[#2b579a] cursor-pointer"
-                      checked={selectedArchiveCols.has(col.key)}
-                      onChange={(e) => {
-                        const next = new Set(selectedArchiveCols);
-                        if (e.target.checked) next.add(col.key);
-                        else next.delete(col.key);
-                        setSelectedArchiveCols(next);
-                      }}
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-gray-700 cursor-pointer" onClick={() => {
-                        const next = new Set(selectedArchiveCols);
-                        if (next.has(col.key)) next.delete(col.key);
-                        else next.add(col.key);
-                        setSelectedArchiveCols(next);
-                      }}>
-                        {renderHighlightedText(col.name, archiveSearchQuery)}
-                      </span>
-                      {activeFilterSaleCol === col.key && <span className="text-[10px] font-bold text-blue-600 mt-0.5">Current Target</span>}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 items-center">
+                  <input 
+                    type="text" 
+                    autoFocus
+                    placeholder="🔍 Search columns to delete..." 
+                    className="w-full border-2 border-[#d7dde1] p-2 rounded-md outline-none focus:border-red-400 text-sm font-semibold transition-colors"
+                    value={archiveDeleteSearchQuery}
+                    onChange={(e) => setArchiveDeleteSearchQuery(e.target.value)}
+                  />
+                  <div className="flex justify-between items-center">
                     <button 
                       onClick={() => {
-                        setActiveFilterSaleCol(col.key);
-                        if (col.archived) handleToggleColumnArchive(col.key, true);
-                      }}
-                      className={`px-3 py-1 rounded text-xs font-bold transition-colors ${activeFilterSaleCol === col.key ? 'bg-[#2b579a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'}`}
+                        const filteredCols = activeConfig?.columns.filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveDeleteSearchQuery.toLowerCase())) || [];
+                        if (selectedArchiveCols.size === filteredCols.length && filteredCols.length > 0) {
+                          setSelectedArchiveCols(new Set());
+                        } else {
+                          setSelectedArchiveCols(new Set(filteredCols.map(c => c.key)));
+                        }
+                      }} 
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold transition-colors border border-gray-300 shadow-sm"
                     >
-                      {activeFilterSaleCol === col.key ? '🎯 Target' : 'Set Target'}
-                    </button>
-                    <button 
-                      onClick={() => handleToggleColumnArchive(col.key, !!col.archived)}
-                      className={`px-3 py-1 rounded text-xs font-bold transition-colors ${col.archived ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
-                    >
-                      {col.archived ? '👁️ Show' : '🙈 Hide'}
+                      {(activeConfig?.columns.filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveDeleteSearchQuery.toLowerCase())).length === selectedArchiveCols.size && selectedArchiveCols.size > 0) ? '☒ Deselect All' : '☑ Select All'}
                     </button>
                   </div>
+                  
+                  {selectedArchiveCols.size > 0 && (
+                    <div className="flex gap-2 justify-between items-center p-2 bg-red-50 border border-red-200 rounded-md mt-1 animate-in fade-in">
+                      <span className="text-[11px] font-bold text-red-800">{selectedArchiveCols.size} selected</span>
+                      <div className="flex gap-1.5">
+                        <button 
+                          onClick={() => setArchiveBulkDeleteConfirm({ type: 'normal', step: 1 })}
+                          className="px-2 py-1 bg-white text-gray-700 border border-gray-300 hover:bg-gray-100 rounded text-[10px] font-bold transition-colors shadow-sm"
+                        >
+                          🗑️ Normal Delete
+                        </button>
+                        <button 
+                          onClick={() => setArchiveBulkDeleteConfirm({ type: 'smart', step: 1 })}
+                          className="px-2 py-1 bg-red-600 text-white hover:bg-red-700 rounded text-[10px] font-bold transition-colors shadow-sm"
+                        >
+                          🧠 Smart Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
-              {activeConfig?.columns.filter(c => c.type === 'sale_tracker').length === 0 && (
-                 <div className="text-sm text-gray-500 text-center p-4 font-semibold">No custom sale columns found yet.</div>
-              )}
-              {activeConfig?.columns.filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveSearchQuery.toLowerCase())).length === 0 && archiveSearchQuery !== "" && (
-                 <div className="text-sm text-red-500 text-center p-4 font-semibold">No columns match your search "{archiveSearchQuery}".</div>
-              )}
-            </div>
-            
-            <div className="flex justify-end pt-2">
-              <button 
-                onClick={() => { setIsArchiveModalOpen(false); setArchiveSearchQuery(""); setSelectedArchiveCols(new Set()); setArchiveBulkDeleteConfirm(null); }} 
-                className="px-5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded font-bold text-sm transition-colors shadow-sm"
-              >
-                Close
-              </button>
-            </div>
-          </>
-        )}
+                
+                {/* Columns List to Delete */}
+                <div className="max-h-[300px] overflow-y-auto border-2 border-gray-100 rounded-md p-2 mb-4 bg-gray-50 flex-1">
+                  {activeConfig?.columns
+                    .filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveDeleteSearchQuery.toLowerCase()))
+                    .map(col => (
+                    <div key={col.key} className={`flex justify-between items-center p-2.5 border-b border-gray-200 last:border-b-0 mb-1 rounded shadow-sm transition-colors bg-white hover:bg-red-50`}>
+                      <div className="flex items-center gap-2.5">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 accent-red-600 cursor-pointer"
+                          checked={selectedArchiveCols.has(col.key)}
+                          onChange={(e) => {
+                            const next = new Set(selectedArchiveCols);
+                            if (e.target.checked) next.add(col.key);
+                            else next.delete(col.key);
+                            setSelectedArchiveCols(next);
+                          }}
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-gray-700 cursor-pointer" onClick={() => {
+                            const next = new Set(selectedArchiveCols);
+                            if (next.has(col.key)) next.delete(col.key);
+                            else next.add(col.key);
+                            setSelectedArchiveCols(next);
+                          }}>
+                            {renderHighlightedText(col.name, archiveDeleteSearchQuery)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {activeConfig?.columns.filter(c => c.type === 'sale_tracker').length === 0 && (
+                     <div className="text-sm text-gray-500 text-center p-4 font-semibold">No custom sale columns found yet.</div>
+                  )}
+                  {activeConfig?.columns.filter(c => c.type === 'sale_tracker' && c.name.toLowerCase().includes(archiveDeleteSearchQuery.toLowerCase())).length === 0 && archiveDeleteSearchQuery !== "" && (
+                     <div className="text-sm text-red-500 text-center p-4 font-semibold">No columns match your search "{archiveDeleteSearchQuery}".</div>
+                  )}
+                </div>
+                
+                <div className="flex justify-end pt-2">
+                  <button 
+                    onClick={() => { 
+                      setIsArchiveDeleteModalOpen(false); 
+                      setIsArchiveModalOpen(true); 
+                      setArchiveDeleteSearchQuery(""); 
+                      setSelectedArchiveCols(new Set()); 
+                      setArchiveBulkDeleteConfirm(null); 
+                    }} 
+                    className="px-5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded font-bold text-sm transition-colors shadow-sm"
+                  >
+                    Back to Archive
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
