@@ -517,9 +517,10 @@ export const AddRowModal = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                 {editableCols.map(col => {
                   const isReadOnly = col.name && col.name.toLowerCase().includes('remaining qty');
+                  const colNumber = columns.findIndex(c => c.key === col.key) + 1;
                   return (
                   <div key={col.key} className="flex flex-col">
-                    <label className="text-xs font-bold text-gray-600 mb-1">{col.name} ({col.type})</label>
+                    <label className="text-xs font-bold text-gray-600 mb-1">{colNumber}. {col.name} ({col.type})</label>
                     {col.type === 'multi_text' ? (
                       <div className={isReadOnly ? 'pointer-events-none opacity-70 bg-gray-50' : ''}>
                       <RichTextEditor 
