@@ -500,6 +500,10 @@ function AppContent() {
   const [showArchived, setShowArchived] = useState(false);
   const [inlineEdit, setInlineEdit] = useState<{id: string, colKey: string, val: string, history?: string[], historyPointer?: number} | null>(null);
   const [isSalePromptOpen, setIsSalePromptOpen] = useState(false);
+  const [isSumModalOpen, setIsSumModalOpen] = useState(false);
+  const [sumStartCol, setSumStartCol] = useState<string>('');
+  const [sumEndCol, setSumEndCol] = useState<string>('');
+  const [activeCustomSum, setActiveCustomSum] = useState<{ startName: string, endName: string, keys: string[] } | null>(null);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isArchiveDeleteModalOpen, setIsArchiveDeleteModalOpen] = useState(false);
   const [archiveDeleteSearchQuery, setArchiveDeleteSearchQuery] = useState("");
@@ -1551,12 +1555,38 @@ function AppContent() {
     });
   };
 
+  const activeColumnsWithSum = useMemo(() => {
+    let cols = [...activeConfig.columns];
+    if (activeCustomSum) {
+      const remIdx = cols.findIndex(c => c.key === 'remaining_qty');
+      if (remIdx !== -1) {
+        cols.splice(remIdx + 1, 0, {
+          key: 'custom_temp_sum',
+          name: `Sum (${activeCustomSum.startName} to ${activeCustomSum.endName})`,
+          type: 'number',
+          locked: true,
+          sortEnabled: true,
+          archived: false
+        } as any);
+      }
+    }
+    return cols;
+  }, [activeConfig.columns, activeCustomSum]);
+
+  const activeRowsWithSum = useMemo(() => {
+    if (!activeCustomSum || !activeConfig.isTrackerPage) return activeRows;
+    return activeRows.map(r => {
+      const sum = activeCustomSum.keys.reduce((acc, k) => acc + (parseFloat(String(r[k] || 0)) || 0), 0);
+      return { ...r, custom_temp_sum: String(sum) };
+    });
+  }, [activeRows, activeCustomSum, activeConfig.isTrackerPage]);
+
   const filteredRows = useMemo(() => {
-    let rows = activeRows;
+    let rows = activeRowsWithSum;
     const activeQueries = [...primarySearchTags, currentSearch.trim()].filter(Boolean);
     if (activeQueries.length > 0) {
       rows = rows.filter(row => {
-        const colData = activeConfig.columns.map(col => {
+        const colData = activeColumnsWithSum.map(col => {
           if (col.key === 'sr' || col.type === 'image' || col.type === 'file') return null;
           const val = row[col.key];
           const strVal = Array.isArray(val) ? val.join(' ') : (val !== null && val !== undefined ? String(val) : '');
@@ -1642,7 +1672,7 @@ function AppContent() {
     }
 
     return sortRows(rows, activeConfig.columns);
-  }, [activeRows, currentSearch, primarySearchTags, activeConfig.columns, activeConfig.isTrackerPage, activeConfig.minStockAlert, trackerFilter, trackerSort]);
+  }, [activeRowsWithSum, currentSearch, primarySearchTags, activeColumnsWithSum, activeConfig.isTrackerPage, activeConfig.minStockAlert, trackerFilter, trackerSort]);
 
   const secondaryFilteredRows = useMemo(() => {
     if (!activeConfig.secondarySearchPage) return [];
@@ -1806,7 +1836,7 @@ function AppContent() {
   const secondaryQueries = [...secondarySearchTags, secondarySearchQuery.trim()].filter(Boolean);
 
   const isSecondaryActive = activeSearchView === 'secondary' && !!(activeConfig.secondarySearchPage && state.pageConfigs[activeConfig.secondarySearchPage]);
-  const displayConfig = isSecondaryActive ? state.pageConfigs[activeConfig.secondarySearchPage!] : activeConfig;
+  const displayConfig = isSecondaryActive ? state.pageConfigs[activeConfig.secondarySearchPage!] : { ...activeConfig, columns: activeColumnsWithSum };
   const displayRows = isSecondaryActive ? secondaryFilteredRows : filteredRows;
   const displayQueries = isSecondaryActive ? secondaryQueries : primaryQueries;
 
@@ -2177,6 +2207,14 @@ function AppContent() {
                             }
 
                             if (config.isTrackerPage) {
+                              if (col.key === 'custom_temp_sum') {
+                                return (
+                                  <td key={col.key} {...commonProps} className={`p-1.5 border-r-[length:medium] border-b-[length:medium] border-[#e0e0e0] overflow-hidden whitespace-pre-wrap bg-purple-50 text-purple-900 font-bold text-center`}>
+                                    {rawVal}
+                                  </td>
+                                );
+                              }
+
                               if (col.key === 'remaining_qty') {
                                 const total = parseFloat(String(row.total_qty || 0));
                                 const totalSales = config.columns.filter(c => c.type === 'sale_tracker').reduce((sum, c) => sum + parseFloat(String(row[c.key] || 0)), 0);
@@ -2315,6 +2353,18 @@ function AppContent() {
       {displayConfig.isTrackerPage && (
         <div className="bg-[#e8edf2] px-3 py-2 flex flex-wrap gap-2 border-b border-[#d8d8d8] items-center">
           <button onClick={() => setIsSalePromptOpen(true)} className="bg-[#217346] text-white px-3 py-1.5 rounded text-xs font-bold shadow hover:bg-[#1e6b41]">➕ Add Sale Column</button>
+          {activeCustomSum ? (
+            <button onClick={() => setActiveCustomSum(null)} className="bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-bold shadow hover:bg-purple-700 flex items-center gap-1">❌ Clear Sum</button>
+          ) : (
+            <button onClick={() => {
+              const saleCols = activeConfig.columns.filter(c => c.type === 'sale_tracker');
+              if (saleCols.length > 0) {
+                 setSumStartCol(saleCols[0].key);
+                 setSumEndCol(saleCols[saleCols.length - 1].key);
+              }
+              setIsSumModalOpen(true);
+            }} className="bg-purple-100 text-purple-800 border border-purple-300 px-3 py-1.5 rounded text-xs font-bold shadow-sm hover:bg-purple-200 flex items-center gap-1">📊 Range Sum</button>
+          )}
           <button onClick={() => setIsArchiveModalOpen(true)} className="bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-bold shadow hover:bg-amber-700 flex items-center gap-1">🗄️ Archive Column</button>
           <label className="flex items-center gap-1 text-xs font-bold text-gray-700 ml-2 cursor-pointer">
             <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded" /> Show History
@@ -2909,6 +2959,71 @@ function AppContent() {
         getImageUrl={getImageUrl}
       />
 
+      {/* --- CUSTOM SUM MODAL --- */}
+      {isSumModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg w-[400px] shadow-2xl">
+            <h3 className="text-lg font-bold mb-1 text-purple-800">📊 Calculate Range Sum</h3>
+            <p className="text-xs text-gray-500 mb-4">Select the start and end columns. The sum will appear next to Remaining Qty.</p>
+            
+            <div className="flex flex-col gap-3 mb-5">
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">Start Column:</label>
+                <select 
+                  className="w-full border border-gray-300 p-2 rounded text-sm outline-none focus:border-purple-500"
+                  value={sumStartCol}
+                  onChange={(e) => setSumStartCol(e.target.value)}
+                >
+                  {activeConfig.columns.filter(c => c.type === 'sale_tracker').map(c => (
+                    <option key={c.key} value={c.key}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">End Column:</label>
+                <select 
+                  className="w-full border border-gray-300 p-2 rounded text-sm outline-none focus:border-purple-500"
+                  value={sumEndCol}
+                  onChange={(e) => setSumEndCol(e.target.value)}
+                >
+                  {activeConfig.columns.filter(c => c.type === 'sale_tracker').map(c => (
+                    <option key={c.key} value={c.key}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setIsSumModalOpen(false)} className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold text-sm transition-colors">Cancel</button>
+              <button onClick={() => {
+                const saleCols = activeConfig.columns.filter(c => c.type === 'sale_tracker');
+                const idx1 = saleCols.findIndex(c => c.key === sumStartCol);
+                const idx2 = saleCols.findIndex(c => c.key === sumEndCol);
+                
+                if (idx1 === -1 || idx2 === -1) {
+                  toast.error("Invalid columns selected");
+                  return;
+                }
+                
+                const startIdx = Math.min(idx1, idx2);
+                const endIdx = Math.max(idx1, idx2);
+                
+                const keysToSum = saleCols.slice(startIdx, endIdx + 1).map(c => c.key);
+                
+                setActiveCustomSum({
+                  startName: saleCols[startIdx].name,
+                  endName: saleCols[endIdx].name,
+                  keys: keysToSum
+                });
+                
+                setIsSumModalOpen(false);
+                toast.success(`Calculated sum for ${keysToSum.length} columns.`);
+              }} className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded font-bold text-sm shadow-md transition-colors">Calculate Sum</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ExcelExportModal
         isOpen={modals.excelExport}
         onClose={closeAllModals}
@@ -2917,8 +3032,8 @@ function AppContent() {
           toggleModal('activePageSettings', true);
         }}
         pageName={state.activePage}
-        columns={activeConfig.columns}
-        rows={activeRows}
+        columns={activeCustomSum ? activeColumnsWithSum : activeConfig.columns}
+        rows={activeCustomSum ? activeRowsWithSum : activeRows}
         lowStockIds={currentLowStockIds}
       />
 
