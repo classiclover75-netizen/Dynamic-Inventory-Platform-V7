@@ -495,6 +495,7 @@ function AppContent() {
 
   const [importProgress, setImportProgress] = useState<{ message: string, percent: number | null }>({ message: 'Processing...', percent: null });
   const [trackerFilter, setTrackerFilter] = useState<'all' | 'low' | 'zero' | 'high'>('all');
+  const [activeFilterSaleCol, setActiveFilterSaleCol] = useState<string | null>(null);
   const [trackerSort, setTrackerSort] = useState<'none' | 'high' | 'low'>('none');
   const [showArchived, setShowArchived] = useState(false);
   const [inlineEdit, setInlineEdit] = useState<{id: string, colKey: string, val: string, history?: string[], historyPointer?: number} | null>(null);
@@ -1542,7 +1543,7 @@ function AppContent() {
     }
     if (activeConfig.isTrackerPage) {
       const saleCols = activeConfig.columns.filter(c => c.type === 'sale_tracker');
-      const latestSaleCol = saleCols.length > 0 ? saleCols[0].key : null;
+      const latestSaleCol = (activeFilterSaleCol && saleCols.some(c => c.key === activeFilterSaleCol)) ? activeFilterSaleCol : (saleCols.length > 0 ? saleCols[0].key : null);
       const getNum = (v: any) => { const n = parseFloat(String(v || 0)); return isNaN(n) ? 0 : n; };
 
       if (trackerFilter !== 'all') {
@@ -1640,7 +1641,7 @@ function AppContent() {
     }
     if (secConfig.isTrackerPage) {
       const saleCols = secConfig.columns.filter(c => c.type === 'sale_tracker');
-      const latestSaleCol = saleCols.length > 0 ? saleCols[0].key : null;
+      const latestSaleCol = (activeFilterSaleCol && saleCols.some(c => c.key === activeFilterSaleCol)) ? activeFilterSaleCol : (saleCols.length > 0 ? saleCols[0].key : null);
       const getNum = (v: any) => { const n = parseFloat(String(v || 0)); return isNaN(n) ? 0 : n; };
 
       if (trackerFilter !== 'all') {
@@ -2222,6 +2223,26 @@ function AppContent() {
           <label className="flex items-center gap-1 text-xs font-bold text-gray-700 ml-2 cursor-pointer">
             <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded" /> Show History
           </label>
+          {(() => {
+            const availableSaleCols = displayConfig.columns.filter(c => c.type === 'sale_tracker');
+            if (availableSaleCols.length === 0) return null;
+            
+            return (
+              <div className="flex items-center gap-1.5 ml-3 bg-white px-2 py-1 rounded shadow-sm border border-gray-200">
+                <span className="text-xs font-bold text-gray-500">Target Sale:</span>
+                <select 
+                  value={activeFilterSaleCol || ''} 
+                  onChange={(e) => setActiveFilterSaleCol(e.target.value || null)}
+                  className="text-xs font-bold text-[#2b579a] border-none outline-none cursor-pointer bg-transparent w-[150px]"
+                >
+                  <option value="">Latest Sale (Default)</option>
+                  {availableSaleCols.map(c => (
+                    <option key={c.key} value={c.key}>{c.name} {c.archived ? '(Archived)' : ''}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          })()}
           <div className="flex-1"></div>
           <div className="flex flex-wrap gap-2 items-center">
             <div className="flex gap-1 bg-white rounded shadow-sm p-1">
