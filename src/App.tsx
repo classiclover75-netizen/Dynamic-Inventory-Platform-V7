@@ -1014,6 +1014,33 @@ function AppContent() {
     }
   };
 
+  const handleDeleteColumnOptions = async (column: Column, deleteType: 'normal' | 'smart') => {
+    if (!state.activePage) return;
+    
+    // Create new array minus the deleted column
+    const updatedColumns = activeConfig.columns.filter(c => c.key !== column.key);
+    
+    // Save updated config
+    const newConfig = { ...activeConfig, columns: updatedColumns };
+    await handleSaveActivePageSettings(newConfig, false);
+
+    const updatedRows = activeRows.map(row => {
+      const newRow = { ...row };
+      
+      if (deleteType === 'smart' && column.type === 'sale_tracker') {
+        const saleValue = parseFloat(String(row[column.key] || 0)) || 0;
+        const totalQty = parseFloat(String(row.total_qty || 0)) || 0;
+        newRow.total_qty = String(totalQty - saleValue);
+      }
+      
+      delete newRow[column.key];
+      return newRow;
+    });
+
+    await handleSaveRows(updatedRows, state.activePage, true);
+    toast(`Column "${column.name}" deleted successfully (${deleteType} mode).`);
+  };
+
   const handleDeletePage = async () => {
     const pageToDelete = state.activePage;
     try {
@@ -2621,6 +2648,7 @@ function AppContent() {
         activePage={state.activePage} 
         pageConfig={state.activePage ? activeConfig : null} 
         onSave={handleSaveActivePageSettings} 
+        onDeleteColumn={handleDeleteColumnOptions}
         onRenamePage={() => { setReturnToSettings(true); toggleModal('activePageSettings', false); toggleModal('renamePage', true); }} 
         onCreateColumn={() => { setReturnToSettings(true); toggleModal('activePageSettings', false); toggleModal('createColumn', true); }} 
         onAddRow={() => { setReturnToSettings(true); toggleModal('activePageSettings', false); toggleModal('addRow', true); }} 

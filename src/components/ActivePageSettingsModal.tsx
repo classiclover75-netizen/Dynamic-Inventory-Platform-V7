@@ -12,6 +12,7 @@ export const ActivePageSettingsModal = ({
   activePage,
   pageConfig,
   onSave,
+  onDeleteColumn,
   onRenamePage,
   onCreateColumn,
   onAddRow,
@@ -34,6 +35,7 @@ export const ActivePageSettingsModal = ({
   activePage: string;
   pageConfig: PageConfig | null;
   onSave: (config: PageConfig, closeModal?: boolean) => void;
+  onDeleteColumn?: (column: Column, deleteType: 'normal' | 'smart') => void;
   onRenamePage: () => void;
   onCreateColumn: () => void;
   onAddRow: () => void;
@@ -60,6 +62,7 @@ export const ActivePageSettingsModal = ({
   const [localColumns, setLocalColumns] = useState<Column[]>(pageConfig?.columns || []);
   const [secondarySearchPage, setSecondarySearchPage] = useState<string>(pageConfig?.secondarySearchPage || '');
   const [sortSettingsColumn, setSortSettingsColumn] = useState<Column | null>(null);
+  const [deleteColumnMode, setDeleteColumnMode] = useState<Column | null>(null);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -434,16 +437,24 @@ export const ActivePageSettingsModal = ({
                                 <button 
                                   className="border-0 bg-transparent cursor-pointer text-red-600 hover:text-red-800 p-1 flex items-center justify-center"
                                   onClick={() => {
-                                    setConfirmationModal({
-                                      isOpen: true,
-                                      title: "Confirm Column Deletion",
-                                      message: `Are you sure you want to delete column "${c.name}"? This cannot be undone.`,
-                                      onConfirm: () => {
-                                        const cols = localColumns.filter(col => col.key !== c.key);
-                                        setLocalColumns(cols);
-                                        saveConfig({ columns: cols }, false);
-                                      }
-                                    });
+                                    if (c.type === 'sale_tracker') {
+                                      setDeleteColumnMode(c);
+                                    } else {
+                                      setConfirmationModal({
+                                        isOpen: true,
+                                        title: "Confirm Column Deletion",
+                                        message: `Are you sure you want to delete column "${c.name}"? This cannot be undone.`,
+                                        onConfirm: () => {
+                                          if (onDeleteColumn) {
+                                            onDeleteColumn(c, 'normal');
+                                          } else {
+                                            const cols = localColumns.filter(col => col.key !== c.key);
+                                            setLocalColumns(cols);
+                                            saveConfig({ columns: cols }, false);
+                                          }
+                                        }
+                                      });
+                                    }
                                   }}
                                   title="Delete Column"
                                 >
@@ -463,6 +474,48 @@ export const ActivePageSettingsModal = ({
           </Droppable>
         </DragDropContext>
       </div>
+      {deleteColumnMode && (
+        <Modal 
+          isOpen={true} 
+          onClose={() => setDeleteColumnMode(null)} 
+          title={`🗑️ Delete Column "${deleteColumnMode.name}"`}
+          width="400px"
+        >
+          <div className="p-4 space-y-4">
+            <Button 
+              variant="red" 
+              className="w-full text-left justify-start h-auto py-3 px-4 flex flex-col gap-1 items-start"
+              onClick={() => {
+                if (onDeleteColumn) {
+                  onDeleteColumn(deleteColumnMode, 'normal');
+                } else {
+                  const cols = localColumns.filter(col => col.key !== deleteColumnMode.key);
+                  setLocalColumns(cols);
+                  saveConfig({ columns: cols }, false);
+                }
+                setDeleteColumnMode(null);
+              }}
+            >
+              <div className="font-bold">🗑️ Normal Delete (Mistake)</div>
+              <div className="text-xs opacity-90 whitespace-normal text-left font-normal border-t border-red-300/30 pt-1">Use this if the column was created by mistake. It will just delete the data and revert the remaining quantity.</div>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="w-full text-left justify-start h-auto py-3 px-4 flex flex-col gap-1 items-start border-red-200 hover:bg-red-50 text-red-700"
+              onClick={() => {
+                if (onDeleteColumn) {
+                  onDeleteColumn(deleteColumnMode, 'smart');
+                }
+                setDeleteColumnMode(null);
+              }}
+            >
+              <div className="font-bold">🧠 Smart Delete (Purge Old Data)</div>
+              <div className="text-xs opacity-90 whitespace-normal text-left font-normal border-t border-red-300/30 pt-1">Use this for old columns. It will permanently deduct these sales from your Total Qty before deleting, keeping your current remaining stock accurate.</div>
+            </Button>
+          </div>
+        </Modal>
+      )}
       <ColumnSortSettingsModal
         isOpen={!!sortSettingsColumn}
         onClose={() => setSortSettingsColumn(null)}
