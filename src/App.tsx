@@ -2674,18 +2674,19 @@ function AppContent() {
                         const isActiveRow = !(
                           isGhost && !ghostIds.has(String(row.id))
                         );
+
+                        const draggableProps: any = {
+                          draggableId: `${isSecondary ? "sec-" : ""}${row.id}`,
+                          index: rowIndex,
+                          isDragDisabled:
+                            isSecondary ||
+                            !config.rowReorderEnabled ||
+                            queries.length > 0,
+                        };
+
                         return (
-                          {/* @ts-ignore */}
-                          <Draggable key={row.id}
-                            draggableId={`${isSecondary ? "sec-" : ""}${row.id}`}
-                            index={rowIndex}
-                            isDragDisabled={
-                              isSecondary ||
-                              !config.rowReorderEnabled ||
-                              queries.length > 0
-                            }
-                          >
-                            {(provided, snapshot) => (
+                          <Draggable key={row.id} {...draggableProps}>
+                            {(provided: any, snapshot: any) => (
                               <tr
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
