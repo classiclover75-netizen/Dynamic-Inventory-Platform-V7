@@ -4344,7 +4344,7 @@ function AppContent() {
       {/* --- CUSTOM SUM MODAL --- */}
       {isSumModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-[400px] shadow-2xl">
+          <div className="bg-white p-6 rounded-lg w-[600px] max-w-[95vw] shadow-2xl">
             <h3 className="text-lg font-bold mb-1 text-purple-800">
               📊 Calculate Range Sum
             </h3>
@@ -4353,9 +4353,9 @@ function AppContent() {
               Remaining Qty.
             </p>
 
-            <div className="flex flex-col gap-6 mb-6">
+            <div className="flex flex-row gap-4 mb-6">
               {/* Start Column Group */}
-              <div className="p-3 bg-purple-50/50 rounded-lg border border-purple-100">
+              <div className="flex-1 p-3 bg-purple-50/50 rounded-lg border border-purple-100">
                 <label className="text-xs font-bold text-purple-700 block mb-2 uppercase tracking-wider">
                   Step 1: Start Column
                 </label>
@@ -4412,7 +4412,7 @@ function AppContent() {
               </div>
 
               {/* End Column Group */}
-              <div className="p-3 bg-purple-50/50 rounded-lg border border-purple-100">
+              <div className="flex-1 p-3 bg-purple-50/50 rounded-lg border border-purple-100">
                 <label className="text-xs font-bold text-purple-700 block mb-2 uppercase tracking-wider">
                   Step 2: End Column
                 </label>
