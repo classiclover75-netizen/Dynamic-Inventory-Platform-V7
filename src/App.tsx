@@ -3368,15 +3368,17 @@ function AppContent() {
           >
             🗄️ Archive Column
           </button>
-          <label className="flex items-center gap-1 text-xs font-bold text-gray-700 ml-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)}
-              className="rounded"
-            />{" "}
-            Show History
-          </label>
+          {!activeConfig.isTrackerPage && (
+            <label className="flex items-center gap-1 text-xs font-bold text-gray-700 ml-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="rounded"
+              />{" "}
+              Show History
+            </label>
+          )}
           <div className="flex-1"></div>
           <div className="flex flex-wrap gap-3 items-center">
             {/* Filter Dropdown */}
