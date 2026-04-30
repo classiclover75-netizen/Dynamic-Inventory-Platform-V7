@@ -964,11 +964,11 @@ function AppContent() {
     }
   };
 
-  const toggleModal = (modal: keyof typeof modals, value: boolean) => {
+  const toggleModal = React.useCallback((modal: keyof typeof modals, value: boolean) => {
     setModals((prev) => ({ ...prev, [modal]: value }));
-  };
+  }, []);
 
-  const closeAllModals = () => {
+  const closeAllModals = React.useCallback(() => {
     setModals({
       createPage: false,
       addRow: false,
@@ -988,7 +988,7 @@ function AppContent() {
     setPreviewContext(null);
     setReturnToSettings(false);
     setReturnToImagePreview(false);
-  };
+  }, []);
 
   const activeConfig = state.pageConfigs[state.activePage] || initialConfig;
   const activeRows = state.pageRows[state.activePage] || [];
