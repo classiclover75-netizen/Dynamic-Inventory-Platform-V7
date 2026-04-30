@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, Button } from './ui';
 
-export const ConfirmationModal = ({
+export const ConfirmationModal = React.memo(({
   isOpen,
   onClose,
   onConfirm,
@@ -27,4 +27,4 @@ export const ConfirmationModal = ({
       </div>
     </Modal>
   );
-};
+});

@@ -13,7 +13,7 @@ interface ReorderSearchBarsModalProps {
   onReorder: (newOrder: ('primary' | 'secondary')[]) => void;
 }
 
-export const ReorderSearchBarsModal: React.FC<ReorderSearchBarsModalProps> = ({
+export const ReorderSearchBarsModal = React.memo(({
   isOpen,
   onClose,
   onBack,
@@ -97,4 +97,4 @@ export const ReorderSearchBarsModal: React.FC<ReorderSearchBarsModalProps> = ({
       </div>
     </Modal>
   );
-};
+});

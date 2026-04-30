@@ -16,7 +16,7 @@ interface ExcelExportModalProps {
   lowStockIds?: Set<string> | null;
 }
 
-export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
+export const ExcelExportModal = React.memo(({
   isOpen, onClose, onBack, pageName, columns, rows, lowStockIds
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -551,4 +551,4 @@ export const ExcelExportModal: React.FC<ExcelExportModalProps> = ({
       </div>
     </Modal>
   );
-};
+});

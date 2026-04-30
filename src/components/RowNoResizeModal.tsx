@@ -9,7 +9,7 @@ interface RowNoResizeModalProps {
   onSave: (width: number) => void;
 }
 
-export const RowNoResizeModal: React.FC<RowNoResizeModalProps> = ({
+export const RowNoResizeModal = React.memo(({
   isOpen,
   onClose,
   state,
@@ -64,4 +64,4 @@ export const RowNoResizeModal: React.FC<RowNoResizeModalProps> = ({
       </div>
     </Modal>
   );
-};
+});

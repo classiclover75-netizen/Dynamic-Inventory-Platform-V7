@@ -13,7 +13,7 @@ interface CopySettingsModalProps {
   pageConfigs: Record<string, any>;
 }
 
-export const CopySettingsModal: React.FC<CopySettingsModalProps> = ({
+export const CopySettingsModal = React.memo(({
   isOpen,
   onClose,
   copyBoxes,
@@ -204,4 +204,4 @@ export const CopySettingsModal: React.FC<CopySettingsModalProps> = ({
       </div>
     </Modal>
   );
-};
+});

@@ -116,7 +116,7 @@ const RichTextEditor = ({ value, onChange, placeholder, minHeight = "36px", clas
   );
 };
 
-export const AddRowModal = ({
+export const AddRowModal = React.memo(({
   isOpen,
   onClose,
   onBack,
@@ -774,4 +774,4 @@ export const AddRowModal = ({
       </div>
     </Modal>
   );
-};
+});

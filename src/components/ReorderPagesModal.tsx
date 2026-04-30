@@ -10,7 +10,7 @@ interface ReorderPagesModalProps {
   onReorder: (newPages: string[]) => void;
 }
 
-export const ReorderPagesModal: React.FC<ReorderPagesModalProps> = ({
+export const ReorderPagesModal = React.memo(({
   isOpen,
   onClose,
   pages,
@@ -119,4 +119,4 @@ export const ReorderPagesModal: React.FC<ReorderPagesModalProps> = ({
       </div>
     </Modal>
   );
-};
+});

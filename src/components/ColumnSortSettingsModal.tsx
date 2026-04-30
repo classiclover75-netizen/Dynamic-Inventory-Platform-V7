@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Input, Select, Modal } from './ui';
 import { Column } from '../types';
 
-export const ColumnSortSettingsModal = ({
+export const ColumnSortSettingsModal = React.memo(({
   isOpen,
   onClose,
   column,
@@ -76,4 +76,4 @@ export const ColumnSortSettingsModal = ({
       </div>
     </Modal>
   );
-};
+});

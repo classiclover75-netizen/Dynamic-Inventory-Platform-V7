@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Input, Modal } from './ui';
 import { useToast } from './ToastProvider';
 
-export const RenamePageModal = ({
+export const RenamePageModal = React.memo(({
   isOpen,
   onClose,
   onBack,
@@ -55,4 +55,4 @@ export const RenamePageModal = ({
       </div>
     </Modal>
   );
-};
+});

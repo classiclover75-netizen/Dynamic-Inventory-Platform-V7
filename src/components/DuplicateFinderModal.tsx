@@ -12,7 +12,7 @@ interface DuplicateFinderModalProps {
   onDeleteRow: (rowId: string) => void;
 }
 
-export const DuplicateFinderModal: React.FC<DuplicateFinderModalProps> = ({
+export const DuplicateFinderModal = React.memo(({
   isOpen,
   onClose,
   onBack,
@@ -123,4 +123,4 @@ export const DuplicateFinderModal: React.FC<DuplicateFinderModalProps> = ({
       </div>
     </Modal>
   );
-};
+});

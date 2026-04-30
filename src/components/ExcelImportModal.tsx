@@ -30,7 +30,7 @@ interface ExcelImportModalProps {
   getImageUrl: (val: any) => string;
 }
 
-export const ExcelImportModal = ({ isOpen, onClose, onBack, onImport, existingColumns, existingRows, importRows, setImportRows, headers, setHeaders, getImageUrl }: ExcelImportModalProps) => {
+export const ExcelImportModal = React.memo(({ isOpen, onClose, onBack, onImport, existingColumns, existingRows, importRows, setImportRows, headers, setHeaders, getImageUrl }: ExcelImportModalProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
@@ -85,125 +85,33 @@ export const ExcelImportModal = ({ isOpen, onClose, onBack, onImport, existingCo
     setSelectedRowIds(new Set());
     
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(arrayBuffer);
-      setProgress(40);
-      
-      const worksheet = workbook.worksheets[0];
-
-      const extractedHeaders: string[] = [];
-      worksheet.getRow(1).eachCell((cell, colNumber) => {
-        extractedHeaders[colNumber - 1] = cell.value?.toString() || `Col ${colNumber}`;
+      const worker = new Worker(new URL("../importWorker.ts", import.meta.url), {
+        type: "module",
       });
 
-      const rows: any[] = [];
-      let currentTrimCount = 0;
-      worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return;
-        
-        const rowData: any = { _id: `import_${Date.now()}_${rowNumber}` };
-        let hasData = false;
-        
-        extractedHeaders.forEach((h, i) => {
-          const cell = row.getCell(i + 1);
-          let cellValue = '';
-          const val = cell.value;
-          if (val && typeof val === 'object') {
-            if ('result' in val) {
-              // For Formulas
-              cellValue = (val as any).result !== null && (val as any).result !== undefined ? String((val as any).result) : '';
-            } else if ('richText' in val && Array.isArray((val as any).richText)) {
-              // For Rich Text (multiple fonts/styles in one cell)
-              cellValue = (val as any).richText.map((rt: any) => {
-                let text = rt.text;
-                if (rt.font) {
-                  let style = '';
-                  if (rt.font.color && rt.font.color.argb) {
-                    const argb = rt.font.color.argb;
-                    const color = argb.length === 8 ? `#${argb.substring(2)}` : `#${argb}`;
-                    style += `color: ${color};`;
-                  }
-                  if (rt.font.bold) style += 'font-weight: bold;';
-                  if (rt.font.italic) style += 'font-style: italic;';
-                  if (rt.font.underline) style += 'text-decoration: underline;';
-                  if (rt.font.strike) style += 'text-decoration: line-through;';
-                  
-                  if (style) {
-                    // Fix: split by newline and wrap each line in its own span
-                    return text.split(/\r?\n/).map((line: any) => line ? `<span style="${style}">${line}</span>` : '').join('\n');
-                  }
-                }
-                return text;
-              }).join('');
-            } else if ('text' in val) {
-              // For Hyperlinks or special text objects
-              cellValue = String((val as any).text);
-            } else {
-              cellValue = '';
-            }
-          } else {
-            // For normal Strings, Numbers, or Dates
-            cellValue = val !== null && val !== undefined ? String(val) : '';
-          }
-          const trimmedValue = cellValue.trim();
-          
-          if (cellValue !== trimmedValue) {
-            currentTrimCount++;
-          }
-          
-          rowData[h] = trimmedValue;
-          if (trimmedValue !== '') hasData = true;
-        });
-
-        // Safeguard 2: Filter "Ghost" (Empty) Excel Rows
-        if (!hasData) return;
-
-        rowData._excelIdx = rowNumber;
-        rows.push(rowData);
-      });
-      
-      setTrimmedCellsCount(currentTrimCount);
-      setProgress(70);
-
-      const images = worksheet.getImages();
-      if (images.length > 0) {
-        // Optimization: Create a map for faster row lookup
-        const rowMap = new Map();
-        rows.forEach(r => rowMap.set(r._excelIdx, r));
-
-        for (let i = 0; i < images.length; i++) {
-          const image = images[i];
-          const img = workbook.getImage(Number(image.imageId));
-          const targetRowIdx = Math.floor(image.range.tl.nativeRow) + 1;
-          const targetRow = rowMap.get(targetRowIdx);
-          
-          if (targetRow && img.buffer) {
-            const base64 = bufferToBase64(img.buffer as ArrayBuffer);
-            const dataUrl = `data:image/${img.extension};base64,${base64}`;
-            const picCol = extractedHeaders.find(h => h.includes('Pics')) || extractedHeaders[0];
-            targetRow[picCol] = dataUrl;
-          }
-
-          // Yield to main thread every 20 images to keep UI responsive
-          if (i % 20 === 0) {
-            setProgress(70 + Math.floor((i / images.length) * 20));
-            await new Promise(resolve => setTimeout(resolve, 0));
-          }
+      worker.onmessage = (event) => {
+        const { type, message, percent, headers, rows, trimmedCount, error } = event.data;
+        if (type === 'progress') {
+          setProgress(percent !== undefined ? percent : 10);
+        } else if (type === 'success') {
+          setHeaders(headers);
+          setImportRows(rows);
+          setTrimmedCellsCount(trimmedCount);
+          setProgress(100);
+          setTimeout(() => setIsProcessing(false), 400);
+          worker.terminate();
+        } else if (type === 'error') {
+          console.error("Worker Error:", message, error);
+          alert("Error reading Excel file. Make sure it's a valid .xlsx file.");
+          setIsProcessing(false);
+          worker.terminate();
         }
-      }
-
-      setHeaders(extractedHeaders.filter(h => h));
-      setImportRows(rows);
-      setProgress(100);
+      };
       
-      setTimeout(() => {
-        setIsProcessing(false);
-      }, 400);
-
+      worker.postMessage({ type: 'excel', file });
     } catch (err) {
-      console.error("Import Error:", err);
-      alert("Error reading Excel file. Make sure it's a valid .xlsx file.");
+      console.error("Worker Creation Error:", err);
+      alert("Error starting Excel parser worker.");
       setIsProcessing(false);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -580,4 +488,4 @@ export const ExcelImportModal = ({ isOpen, onClose, onBack, onImport, existingCo
       </div>
     </Modal>
   );
-};
+});

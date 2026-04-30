@@ -5,7 +5,7 @@ import { useToast } from './ToastProvider';
 import { Edit, RefreshCw, X, ArrowLeft, ZoomIn, ZoomOut, RotateCcw, Trash2 } from 'lucide-react';
 import { CopyPopupNotification } from './CopyPopupNotification';
 
-export const ImagePreviewModal = ({
+export const ImagePreviewModal = React.memo(({
   isOpen,
   onClose,
   onBack,
@@ -365,4 +365,4 @@ export const ImagePreviewModal = ({
       </div>
     </div>
   );
-};
+});

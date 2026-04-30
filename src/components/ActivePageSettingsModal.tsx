@@ -6,7 +6,7 @@ import { Edit, Trash2, Plus, GripVertical, RefreshCw, ArrowUpDown, Lock, Sliders
 import { ColumnSortSettingsModal } from './ColumnSortSettingsModal';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
-export const ActivePageSettingsModal = ({
+export const ActivePageSettingsModal = React.memo(({
   isOpen,
   onClose,
   activePage,
@@ -551,4 +551,4 @@ export const ActivePageSettingsModal = ({
       </div>
     </Modal>
   );
-};
+});

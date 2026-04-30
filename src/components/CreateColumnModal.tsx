@@ -4,7 +4,7 @@ import { ColumnType, Column } from '../types';
 import { useToast } from './ToastProvider';
 import { Trash2, Plus } from 'lucide-react';
 
-export const CreateColumnModal = ({
+export const CreateColumnModal = React.memo(({
   isOpen,
   onClose,
   onBack,
@@ -103,4 +103,4 @@ export const CreateColumnModal = ({
       </div>
     </Modal>
   );
-};
+});

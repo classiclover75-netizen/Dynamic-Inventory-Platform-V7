@@ -3,7 +3,7 @@ import { Button, Input, Select, Modal } from './ui';
 import { Column, ColumnType } from '../types';
 import { useToast } from './ToastProvider';
 
-export const EditColumnModal = ({
+export const EditColumnModal = React.memo(({
   isOpen,
   onClose,
   onBack,
@@ -256,4 +256,4 @@ export const EditColumnModal = ({
       </div>
     </Modal>
   );
-};
+});

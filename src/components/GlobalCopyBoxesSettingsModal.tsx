@@ -11,7 +11,7 @@ interface GlobalCopyBoxesSettingsModalProps {
   onSave: (settings: GlobalCopyBoxesSettings) => void;
 }
 
-export const GlobalCopyBoxesSettingsModal: React.FC<GlobalCopyBoxesSettingsModalProps> = ({
+export const GlobalCopyBoxesSettingsModal = React.memo(({
   isOpen,
   onClose,
   state,
@@ -196,4 +196,4 @@ export const GlobalCopyBoxesSettingsModal: React.FC<GlobalCopyBoxesSettingsModal
     </div>
   </Modal>
   );
-};
+});

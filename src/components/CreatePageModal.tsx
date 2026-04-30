@@ -4,7 +4,7 @@ import { ColumnType, Column, PageConfig } from '../types';
 import { useToast } from './ToastProvider';
 import { Trash2, Plus, Wand2 } from 'lucide-react';
 
-export const CreatePageModal = ({
+export const CreatePageModal = React.memo(({
   isOpen,
   onClose,
   onCreate,
@@ -150,4 +150,4 @@ export const CreatePageModal = ({
       </div>
     </Modal>
   );
-};
+});
