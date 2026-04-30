@@ -4373,7 +4373,7 @@ function AppContent() {
                       const matched = activeConfig.columns.find(
                         (c) =>
                           c.type === "sale_tracker" &&
-                          c.name.toLowerCase().includes(val.toLowerCase()),
+                          val.toLowerCase().split(' ').filter(Boolean).every(term => c.name.toLowerCase().includes(term)),
                       );
                       if (matched) setSumStartCol(matched.key);
                     }
@@ -4384,9 +4384,7 @@ function AppContent() {
                     .filter(
                       (c) =>
                         c.type === "sale_tracker" &&
-                        (c.name
-                          .toLowerCase()
-                          .includes(sumStartSearchQuery.toLowerCase()) ||
+                        (sumStartSearchQuery.toLowerCase().split(' ').filter(Boolean).every(term => c.name.toLowerCase().includes(term)) ||
                           c.key === sumStartCol),
                     )
                     .map((c) => (
@@ -4401,9 +4399,7 @@ function AppContent() {
                   {activeConfig.columns.filter(
                     (c) =>
                       c.type === "sale_tracker" &&
-                      (c.name
-                        .toLowerCase()
-                        .includes(sumStartSearchQuery.toLowerCase()) ||
+                      (sumStartSearchQuery.toLowerCase().split(' ').filter(Boolean).every(term => c.name.toLowerCase().includes(term)) ||
                         c.key === sumStartCol),
                   ).length === 0 && (
                     <div className="p-3 text-sm text-gray-400 text-center italic font-semibold">
@@ -4432,7 +4428,7 @@ function AppContent() {
                         .find(
                           (c) =>
                             c.type === "sale_tracker" &&
-                            c.name.toLowerCase().includes(val.toLowerCase()),
+                            val.toLowerCase().split(' ').filter(Boolean).every(term => c.name.toLowerCase().includes(term)),
                         );
                       if (matched) setSumEndCol(matched.key);
                     }
@@ -4443,9 +4439,7 @@ function AppContent() {
                     .filter(
                       (c) =>
                         c.type === "sale_tracker" &&
-                        (c.name
-                          .toLowerCase()
-                          .includes(sumEndSearchQuery.toLowerCase()) ||
+                        (sumEndSearchQuery.toLowerCase().split(' ').filter(Boolean).every(term => c.name.toLowerCase().includes(term)) ||
                           c.key === sumEndCol),
                     )
                     .map((c) => (
@@ -4460,9 +4454,7 @@ function AppContent() {
                   {activeConfig.columns.filter(
                     (c) =>
                       c.type === "sale_tracker" &&
-                      (c.name
-                        .toLowerCase()
-                        .includes(sumEndSearchQuery.toLowerCase()) ||
+                      (sumEndSearchQuery.toLowerCase().split(' ').filter(Boolean).every(term => c.name.toLowerCase().includes(term)) ||
                         c.key === sumEndCol),
                   ).length === 0 && (
                     <div className="p-3 text-sm text-gray-400 text-center italic font-semibold">
